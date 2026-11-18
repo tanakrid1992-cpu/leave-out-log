@@ -4,12 +4,12 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebas
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyDovLKo3djdRbs963vqKdbj-geRWyzMTrg",
+  authDomain: "klongtamru-leave-out-log.firebaseapp.com",
+  projectId: "klongtamru-leave-out-log",
+  storageBucket: "klongtamru-leave-out-log.firebasestorage.app",
+  messagingSenderId: "222241851964",
+  appId: "1:222241851964:web:80214c0753356594561139"
 };
 
 export const app = initializeApp(firebaseConfig);
