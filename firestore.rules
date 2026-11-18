@@ -1,15 +1,92 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ผู้ดูแล: บัญชีหลัก หรือมีเอกสาร admins/{อีเมล}
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null &&
+        (request.auth.token.email == 'tanakrid1992@gmail.com' || exists(/databases/$(database)/documents/admins/$(request.auth.token.email)));
+    }
+    function divs() { return ['สำนักปลัดเทศบาล','กองคลัง','กองช่าง','กองการศึกษา','กองสาธารณสุขและสิ่งแวดล้อม','กองสวัสดิการสังคม','กองยุทธศาสตร์และงบประมาณ']; }
+    function str(v, max) { return v is string && v.size() <= max; }
+
+    match /admins/{email} { allow read, write: if isAdmin(); }
+
+    // ===== บันทึกการออกนอกสถานที่ =====
     match /leave_out_logs/{id} {
-      // ทุกคนบันทึกได้ (ตรวจรูปแบบข้อมูล) / อ่าน-ลบ เฉพาะผู้ดูแลที่ล็อกอิน
       allow create: if request.resource.data.keys().hasOnly(['name','position','division','purpose','place','date','timeOut','timeIn','durationMin','createdAt'])
-        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 120
-        && request.resource.data.division in ['สำนักปลัดเทศบาล','กองคลัง','กองช่าง','กองการศึกษา','กองสาธารณสุขและสิ่งแวดล้อม','กองสวัสดิการสังคม','กองยุทธศาสตร์และงบประมาณ']
+        && str(request.resource.data.name, 120) && request.resource.data.name.size() > 0
+        && request.resource.data.division in divs()
         && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && request.resource.data.durationMin is int && request.resource.data.durationMin > 0
         && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ===== ระบบขอใช้รถส่วนกลาง =====
+    match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /cars/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /counters/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
+      allow update: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == resource.data.n + 1;
+    }
+
+    match /car_requests/{rid} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['name','position','department','phone','destination','purpose','passengers',
+          'startDate','startTime','endDate','endTime','carPlate','approver','status','createdAt','ts'])
+        && request.resource.data.status == 'รออนุมัติ'
+        && str(request.resource.data.name, 120) && request.resource.data.name.size() > 0
+        && str(request.resource.data.destination, 300) && str(request.resource.data.purpose, 500)
+        && request.resource.data.ts == request.time
+        && rid.matches('^CR[0-9]{4}-[0-9]{3,}$')
+        && getAfter(/databases/$(database)/documents/counters/$(rid.split('-')[0])).data.n == int(rid.split('-')[1]);
+      allow update: if isAdmin() || signUpdate(rid);
+      allow delete: if isAdmin();
+    }
+    function slotOk(rid, slot, role) {
+      let s = request.resource.data[slot];
+      let p = getAfter(/databases/$(database)/documents/signatures/$(rid + '_' + slot)).data;
+      let sg = get(/databases/$(database)/documents/signers/$(s.id)).data;
+      return resource.data.get(slot, null) == null && p.signerId == s.id && p.t == request.time
+        && sg.active == true && role in sg.roles && s.name == sg.name;
+    }
+    function signUpdate(rid) {
+      let ch = request.resource.data.diff(resource.data).affectedKeys();
+      return (ch.hasOnly(['sigReq']) && slotOk(rid, 'sigReq', 'ผู้ขอ') && request.resource.data.sigReq.name == resource.data.name)
+        || (ch.hasOnly(['sigHead']) && slotOk(rid, 'sigHead', 'ผู้อำนวยการกอง'))
+        || (ch.hasOnly(['sigAppr','status','carPlate','driver','approver','approveNote','approvedAt'])
+            && resource.data.status == 'รออนุมัติ' && request.resource.data.status in ['อนุมัติ','ไม่อนุมัติ']
+            && slotOk(rid, 'sigAppr', 'ผู้สั่งใช้รถ'));
+    }
+
+    // หลักฐานการลงนาม: ตรวจรหัส 6 หลัก (hash) กับข้อมูลลับ — ไม่มีใครอ่านรหัสได้
+    match /signatures/{sid} {
+      allow read: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['signerId','h','t']) && request.resource.data.t == request.time
+        && get(/databases/$(database)/documents/signer_secrets/$(request.resource.data.signerId)).data.pinHash == request.resource.data.h;
+    }
+
+    match /signers/{id} {
+      allow read: if true;
+      allow create: if isAdmin() || (
+        request.resource.data.keys().hasOnly(['name','position','roles','sig','active','createdAt'])
+        && request.resource.data.roles == ['ผู้ขอ'] && request.resource.data.active == true
+        && str(request.resource.data.sig, 60000) && existsAfter(/databases/$(database)/documents/signer_secrets/$(id)));
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['position','sig','updatedAt'])
+        && str(request.resource.data.sig, 60000)
+        && getAfter(/databases/$(database)/documents/signer_secrets/$(id)).data.prev == get(/databases/$(database)/documents/signer_secrets/$(id)).data.pinHash
+        && getAfter(/databases/$(database)/documents/signer_secrets/$(id)).data.t == request.time);
+      allow delete: if isAdmin();
+    }
+    match /signer_secrets/{id} {
+      allow read: if false;
+      allow create: if isAdmin() || (!exists(/databases/$(database)/documents/signers/$(id))
+        && existsAfter(/databases/$(database)/documents/signers/$(id)) && request.resource.data.keys().hasOnly(['pinHash','t']));
+      allow update: if isAdmin() || (request.resource.data.keys().hasOnly(['pinHash','prev','t'])
+        && request.resource.data.prev == resource.data.pinHash && request.resource.data.t == request.time);
+      allow delete: if isAdmin();
     }
   }
 }

@@ -9,9 +9,10 @@
 <body>
 <header class="top"><div class="in">
   <div class="brand"><div class="logo">🛰️</div><div><b>Smart Leave-Out</b><small>บันทึกการออกนอกสถานที่ · ธุระส่วนตัวในเวลาราชการ</small></div></div>
+  <nav class="navtabs"><a href="index.html" class="on">📝 ออกนอกสถานที่</a><a href="car.html">🚘 ขอใช้รถส่วนกลาง</a><a href="dashboard.html">📊 Dashboard</a></nav>
   <div class="navl">
     <div class="clock"><div class="t" id="clk">--:--:--</div><div class="d" id="clkD"></div></div>
-    <a class="chipbtn" href="dashboard.html">📊 Dashboard</a>
+    
   </div>
 </div></header>
 
@@ -31,7 +32,7 @@
         <button type="button" class="chipbtn" id="pEdit">✏️ แก้ไข</button>
       </div>
       <div class="grid g2" id="who">
-        <div><label>ชื่อ - สกุล <span class="req">*</span></label><input name="name" required placeholder="นาย/นาง/นางสาว ชื่อ สกุล"></div>
+        <div><label>ชื่อ - สกุล <span class="req">*</span></label><input name="name" id="fName" required placeholder="นาย/นาง/นางสาว ชื่อ สกุล"></div>
         <div><label>ตำแหน่ง <span class="req">*</span></label><input name="position" required placeholder="เช่น นักวิชาการคลัง"></div>
         <div class="full"><label>สำนัก/กอง <span class="req">*</span></label><select name="division" id="division" required><option value="">— เลือกสำนัก/กอง —</option></select></div>
       </div>
@@ -83,7 +84,7 @@
     <div class="ticket" id="ticket"></div>
     <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-pri" id="btnNew">＋ บันทึกรายการใหม่</button>
-      <a class="btn btn-ghost" href="dashboard.html">📊 ดูแดชบอร์ด</a>
+      <a class="btn btn-ghost" href="car.html#form">🚘 ขอใช้รถไปราชการ</a><a class="btn btn-ghost" href="dashboard.html">📊 ดูแดชบอร์ด</a>
     </div>
   </section>
   <footer>© เทศบาลตำบลคลองตำหรุ · Smart Leave-Out System</footer>
@@ -91,8 +92,8 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { db, COLLECTION, DIVISIONS } from "./js/firebase-config.js";
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { db, COLLECTION, DIVISIONS, CAR } from "./js/firebase-config.js";
+import { collection, addDoc, serverTimestamp, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = s => document.querySelector(s), f = $("#f");
 const pad = n => String(n).padStart(2, "0");
@@ -153,6 +154,9 @@ function setDefaults() {
   renderProfile(); renderPlaces(); analyze();
 }
 
+// เชื่อมข้อมูลระบบขอใช้รถ: ตรวจว่ามีภารกิจไปราชการซ้อนเวลาหรือไม่
+let TRIPS = [];
+onSnapshot(query(collection(db, CAR.REQ), where("status", "in", ["อนุมัติ", "รออนุมัติ"])), s => { TRIPS = s.docs.map(d => ({ id: d.id, ...d.data() })); analyze(); }, () => {});
 // วิเคราะห์อัจฉริยะ
 function analyze() {
   if (!$("#timeOut").value || !$("#timeIn").value) return;
@@ -174,11 +178,14 @@ function analyze() {
   const dd = new Date(dt + "T00:00");
   if (dt && dd < today) tips.push(["warn", "📅", "เป็นการบันทึกย้อนหลัง"]);
   if (dt && [0, 6].includes(dd.getDay())) tips.push(["warn", "🗓️", "วันที่เลือกเป็นวันหยุดเสาร์-อาทิตย์"]);
+  const nm = (f.name.value || "").trim(), S = dt + " " + $("#timeOut").value, E = dt + " " + $("#timeIn").value;
+  const trip = nm && TRIPS.find(r => r.name.trim() === nm && (r.startDate + " " + r.startTime) < E && (r.endDate + " " + r.endTime) > S);
+  if (trip) tips.push(["warn", "🚘", `ช่วงเวลานี้คุณมีคำขอใช้รถไปราชการ ${trip.id} (${trip.status}) ไป ${trip.destination.replace(/</g, "&lt;")}`]);
   if (!tips.length) tips.push(["ok", "✅", "ข้อมูลเวลาอยู่ในเกณฑ์ปกติ พร้อมบันทึก"]);
   $("#tips").innerHTML = tips.map(([c, i, t]) => `<div class="tip ${c}"><span>${i}</span><span>${t}</span></div>`).join("");
   $("#btnSave").disabled = d <= 0;
 }
-$("#date").onchange = analyze;
+$("#date").onchange = analyze; $("#fName").addEventListener("change", analyze);
 f.addEventListener("reset", () => setTimeout(setDefaults));
 
 f.addEventListener("submit", async e => {

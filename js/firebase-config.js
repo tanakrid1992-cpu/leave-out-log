@@ -28,3 +28,21 @@ export const DIVISIONS = [
   "กองยุทธศาสตร์และงบประมาณ"
 ];
 export const DIV_COLORS = ["#6366f1", "#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#ec4899", "#8b5cf6"];
+
+// ===== ระบบขอใช้รถส่วนกลาง =====
+export const CAR = { REQ: "car_requests", CARS: "cars", SIGNERS: "signers", SECRETS: "signer_secrets", SIGS: "signatures", COUNTERS: "counters", SETTINGS: "settings" };
+export const ROLES = { req: "ผู้ขอ", head: "ผู้อำนวยการกอง", appr: "ผู้สั่งใช้รถ" };
+export const CAR_DEFAULT = {
+  orgName: "เทศบาลตำบลคลองตำหรุ",
+  address: "อำเภอเมืองชลบุรี จังหวัดชลบุรี",
+  toTitle: "นายกเทศมนตรีตำบลคลองตำหรุ",
+  headTitle: "",
+  headName: "",
+  approverTitle: "รองนายกเทศมนตรี ปฏิบัติราชการแทน",
+  approverTitle2: "นายกเทศมนตรีตำบลคลองตำหรุ",
+  approverName: "นายประสาน ผ่องภิญโญ",
+  approverList: "นายประสาน ผ่องภิญโญ,นางวรรณลักษณ์ เทศริต"
+};
+export const SEED_CAR = { plate: "งจ 4782 ชลบุรี", brand: "รถยนต์ส่วนกลาง", type: "รถกระบะ", seats: "5", driver: "", active: true };
+// ผู้ดูแลหลัก (เพิ่มผู้ดูแลอื่นได้ที่ Firestore: admins/{อีเมล})
+export const OWNER = "tanakrid1992@gmail.com";
