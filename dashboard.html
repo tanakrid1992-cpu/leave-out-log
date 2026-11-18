@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>แดชบอร์ด · บันทึกการออกนอกสถานที่</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+</head>
+<body>
+<header class="hero">
+  <div class="nav">
+    <div class="brand"><div class="logo">📊</div><div>แดชบอร์ดการออกนอกสถานที่<small>เทศบาลตำบลคลองตำหรุ</small></div></div>
+    <div style="display:flex;gap:8px">
+      <a class="btn-ghost" href="index.html">📝 แบบบันทึก</a>
+      <a class="btn-ghost hidden" href="#" id="btnLogout">ออกจากระบบ</a>
+    </div>
+  </div>
+</header>
+
+<!-- Login -->
+<main class="login hidden" id="loginView">
+  <div class="card">
+    <h2>เข้าสู่ระบบผู้ดูแล</h2>
+    <p class="sub">สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์ดูข้อมูล</p>
+    <form id="loginForm" class="grid">
+      <div><label>อีเมล</label><input type="email" id="email" required></div>
+      <div><label>รหัสผ่าน</label><input type="password" id="pass" required></div>
+      <button class="btn btn-pri" style="justify-content:center">เข้าสู่ระบบ</button>
+    </form>
+  </div>
+</main>
+
+<!-- Dashboard -->
+<main class="wrap hidden" id="dashView">
+  <section class="card" style="margin-bottom:16px">
+    <div class="toolbar">
+      <div style="flex:0 0 auto"><label>ช่วงเวลา</label>
+        <div class="tabs" id="periodTabs">
+          <button class="tab" data-p="week">สัปดาห์</button>
+          <button class="tab on" data-p="month">เดือน</button>
+          <button class="tab" data-p="year">ปี</button>
+        </div>
+      </div>
+      <div><label>วันที่อ้างอิง</label><input type="date" id="refDate"></div>
+      <div><label>สำนัก/กอง</label><select id="divFilter"><option value="">ทุกสำนัก/กอง</option></select></div>
+      <div><label>ค้นหา</label><input id="q" placeholder="ชื่อ, สถานที่, ธุระ..."></div>
+      <div style="flex:0 0 auto"><button class="btn btn-ok" id="btnExport">⬇️ Export Excel</button></div>
+    </div>
+    <p class="range-lbl" id="rangeLbl" style="margin:12px 0 0"></p>
+  </section>
+
+  <section class="grid g4" style="margin-bottom:16px">
+    <div class="card kpi"><div class="ic" style="background:#eef2ff">📋</div><div><div class="v" id="kTotal">0</div><div class="l">รายการทั้งหมด</div></div></div>
+    <div class="card kpi"><div class="ic" style="background:#ecfeff">👥</div><div><div class="v" id="kPeople">0</div><div class="l">จำนวนบุคลากร</div></div></div>
+    <div class="card kpi"><div class="ic" style="background:#fffbeb">⏱</div><div><div class="v" id="kHours">0</div><div class="l">ชั่วโมงรวม</div></div></div>
+    <div class="card kpi"><div class="ic" style="background:#fdf2f8">📈</div><div><div class="v" id="kAvg">0</div><div class="l">เฉลี่ย (นาที/ครั้ง)</div></div></div>
+  </section>
+
+  <section class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3 style="margin-top:0">แนวโน้มจำนวนครั้ง</h3><div class="chart-box"><canvas id="cTrend"></canvas></div></div>
+    <div class="card"><h3 style="margin-top:0">สัดส่วนตามสำนัก/กอง</h3><div class="chart-box"><canvas id="cDiv"></canvas></div></div>
+  </section>
+
+  <section class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3 style="margin-top:0">ชั่วโมงรวมแยกสำนัก/กอง</h3><div class="divbars" id="divBars"></div></div>
+    <div class="card"><h3 style="margin-top:0">บุคลากรที่ออกบ่อยที่สุด (Top 10)</h3><div class="tbl-wrap" style="max-height:330px"><table><thead><tr><th>#</th><th>ชื่อ - สกุล</th><th>สำนัก/กอง</th><th>ครั้ง</th><th>ชม.</th></tr></thead><tbody id="topBody"></tbody></table></div></div>
+  </section>
+
+  <section class="card">
+    <h3 style="margin-top:0">รายการทั้งหมด <span class="pill" id="cnt">0</span></h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>วันที่</th><th>ชื่อ - สกุล</th><th>ตำแหน่ง</th><th>สำนัก/กอง</th><th>ขออนุญาตไป</th><th>สถานที่</th><th>เวลา</th><th>นาที</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </section>
+  <footer>© เทศบาลตำบลคลองตำหรุ</footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { db, auth, COLLECTION, DIVISIONS, DIV_COLORS, ORG_NAME } from "./js/firebase-config.js";
+import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const thDate = s => new Date(s+"T00:00").toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"});
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const toast = (m,e)=>{const t=$("#toast");t.textContent=m;t.className="toast show"+(e?" err":"");setTimeout(()=>t.className="toast",2800);};
+
+let period = "month", rows = [], view = [], charts = {};
+DIVISIONS.forEach(d => $("#divFilter").add(new Option(d,d)));
+$("#refDate").value = ymd(new Date());
+
+// ===== Auth =====
+onAuthStateChanged(auth, u => {
+  $("#loginView").classList.toggle("hidden", !!u);
+  $("#dashView").classList.toggle("hidden", !u);
+  $("#btnLogout").classList.toggle("hidden", !u);
+  if (u) load();
+});
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault();
+  try { await signInWithEmailAndPassword(auth, $("#email").value, $("#pass").value); }
+  catch { toast("อีเมลหรือรหัสผ่านไม่ถูกต้อง", true); }
+};
+$("#btnLogout").onclick = e => { e.preventDefault(); signOut(auth); };
+
+// ===== ช่วงเวลา =====
+function range(){
+  const r = new Date($("#refDate").value+"T00:00");
+  let s, e, label;
+  if (period === "week"){ // จันทร์–อาทิตย์
+    s = new Date(r); s.setDate(r.getDate() - ((r.getDay()+6)%7));
+    e = new Date(s); e.setDate(s.getDate()+6);
+    label = `สัปดาห์ ${thDate(ymd(s))} – ${thDate(ymd(e))}`;
+  } else if (period === "month"){
+    s = new Date(r.getFullYear(), r.getMonth(), 1); e = new Date(r.getFullYear(), r.getMonth()+1, 0);
+    label = "เดือน" + s.toLocaleDateString("th-TH",{month:"long",year:"numeric"});
+  } else {
+    s = new Date(r.getFullYear(),0,1); e = new Date(r.getFullYear(),11,31);
+    label = `ปี พ.ศ. ${r.getFullYear()+543}`;
+  }
+  return { s, e, start: ymd(s), end: ymd(e), label };
+}
+
+async function load(){
+  const R = range();
+  $("#rangeLbl").textContent = "📅 " + R.label;
+  try {
+    const snap = await getDocs(query(collection(db, COLLECTION), where("date",">=",R.start), where("date","<=",R.end), orderBy("date","desc")));
+    rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    rows.sort((a,b) => (b.date+b.timeOut).localeCompare(a.date+a.timeOut));
+  } catch (err) { console.error(err); toast("โหลดข้อมูลไม่สำเร็จ: "+err.message, true); rows = []; }
+  render();
+}
+
+function filtered(){
+  const dv = $("#divFilter").value, q = $("#q").value.trim().toLowerCase();
+  return rows.filter(r => (!dv || r.division===dv) &&
+    (!q || [r.name,r.position,r.place,r.purpose].join(" ").toLowerCase().includes(q)));
+}
+
+function render(){
+  view = filtered();
+  const R = range();
+  const totalMin = view.reduce((a,r)=>a+(r.durationMin||0),0);
+  $("#kTotal").textContent = view.length.toLocaleString();
+  $("#kPeople").textContent = new Set(view.map(r=>r.name)).size;
+  $("#kHours").textContent = (totalMin/60).toFixed(1);
+  $("#kAvg").textContent = view.length ? Math.round(totalMin/view.length) : 0;
+  $("#cnt").textContent = view.length;
+
+  // ตาราง
+  $("#tbody").innerHTML = view.map(r => `<tr>
+    <td>${thDate(r.date)}</td><td><b>${esc(r.name)}</b></td><td class="muted">${esc(r.position)}</td>
+    <td><span class="pill" style="background:${DIV_COLORS[DIVISIONS.indexOf(r.division)]}1a;color:${DIV_COLORS[DIVISIONS.indexOf(r.division)]}">${esc(r.division)}</span></td>
+    <td>${esc(r.purpose)}</td><td>${esc(r.place)}</td><td>${r.timeOut}–${r.timeIn}</td><td>${r.durationMin}</td>
+    <td><button class="del" title="ลบ" data-id="${r.id}">🗑</button></td></tr>`).join("") ||
+    `<tr><td colspan="9" class="muted" style="text-align:center;padding:30px">ไม่มีข้อมูลในช่วงเวลานี้</td></tr>`;
+
+  // แยกกอง
+  const byDiv = DIVISIONS.map(d => { const x = view.filter(r=>r.division===d); return { d, n:x.length, m:x.reduce((a,r)=>a+r.durationMin,0) }; });
+  const maxM = Math.max(1,...byDiv.map(x=>x.m));
+  $("#divBars").innerHTML = byDiv.map((x,i)=>`<div class="row"><div class="nm">${x.d}</div><div class="bar"><i style="width:${x.m/maxM*100}%;background:${DIV_COLORS[i]}"></i></div><div class="n">${(x.m/60).toFixed(1)}</div></div>`).join("");
+
+  // Top 10
+  const ppl = {};
+  view.forEach(r => { const k=r.name+"|"+r.division; ppl[k] ??= { name:r.name, div:r.division, n:0, m:0 }; ppl[k].n++; ppl[k].m+=r.durationMin; });
+  $("#topBody").innerHTML = Object.values(ppl).sort((a,b)=>b.n-a.n||b.m-a.m).slice(0,10)
+    .map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td class="muted">${esc(p.div)}</td><td><b>${p.n}</b></td><td>${(p.m/60).toFixed(1)}</td></tr>`).join("") ||
+    `<tr><td colspan="5" class="muted" style="text-align:center">—</td></tr>`;
+
+  // แนวโน้ม
+  let labels=[], keys=[];
+  if (period==="year"){
+    for(let m=0;m<12;m++){ keys.push(pad(m+1)); labels.push(new Date(2000,m,1).toLocaleDateString("th-TH",{month:"short"})); }
+  } else {
+    for(let d=new Date(R.s); d<=R.e; d.setDate(d.getDate()+1)){ keys.push(ymd(d)); labels.push(d.getDate()+(period==="week"?" "+d.toLocaleDateString("th-TH",{weekday:"short"}):"")); }
+  }
+  const keyOf = r => period==="year" ? r.date.slice(5,7) : r.date;
+  const trendSets = DIVISIONS.map((d,i)=>({ label:d, backgroundColor:DIV_COLORS[i], borderRadius:4,
+    data: keys.map(k => view.filter(r=>r.division===d && keyOf(r)===k).length) })).filter(s=>s.data.some(v=>v));
+  draw("cTrend","bar",{ labels, datasets:trendSets },{ scales:{ x:{stacked:true,grid:{display:false}}, y:{stacked:true,beginAtZero:true,ticks:{precision:0}} }, plugins:{legend:{display:false}} });
+  draw("cDiv","doughnut",{ labels:DIVISIONS, datasets:[{ data:byDiv.map(x=>x.n), backgroundColor:DIV_COLORS, borderWidth:2 }] },
+    { cutout:"62%", plugins:{ legend:{ position:"right", labels:{ boxWidth:12, font:{family:"Sarabun"} } } } });
+}
+function draw(id,type,data,options){
+  charts[id]?.destroy();
+  Chart.defaults.font.family = "Sarabun";
+  charts[id] = new Chart($("#"+id), { type, data, options:{ responsive:true, maintainAspectRatio:false, ...options } });
+}
+
+// ===== Events =====
+$("#periodTabs").onclick = e => { const b=e.target.closest(".tab"); if(!b) return;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t===b)); period=b.dataset.p; load(); };
+$("#refDate").onchange = load;
+$("#divFilter").onchange = render;
+$("#q").oninput = render;
+$("#tbody").onclick = async e => { const b=e.target.closest(".del"); if(!b) return;
+  if(!confirm("ยืนยันลบรายการนี้?")) return;
+  try { await deleteDoc(doc(db,COLLECTION,b.dataset.id)); rows=rows.filter(r=>r.id!==b.dataset.id); render(); toast("ลบเรียบร้อย"); }
+  catch(err){ toast("ลบไม่สำเร็จ: "+err.message,true); } };
+
+// ===== Export Excel (แยกชีตตามสำนัก/กอง + สรุป) =====
+$("#btnExport").onclick = () => {
+  const R = range(), list = view;
+  if (!list.length) return toast("ไม่มีข้อมูลให้ export", true);
+  const wb = XLSX.utils.book_new();
+  const H = { font:{bold:true,color:{rgb:"FFFFFF"},name:"TH SarabunPSK",sz:16}, fill:{fgColor:{rgb:"4F46E5"}}, alignment:{horizontal:"center",vertical:"center",wrapText:true}, border:bd() };
+  const C = { font:{name:"TH SarabunPSK",sz:16}, alignment:{vertical:"top",wrapText:true}, border:bd() };
+  const T = { font:{bold:true,name:"TH SarabunPSK",sz:18} };
+  function bd(){ const s={style:"thin",color:{rgb:"CBD5E1"}}; return {top:s,bottom:s,left:s,right:s}; }
+  function sheet(title, head, body, widths){
+    const aoa = [[title],[`ช่วงเวลา: ${R.label}`],[], head, ...body];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"] = [{s:{r:0,c:0},e:{r:0,c:head.length-1}},{s:{r:1,c:0},e:{r:1,c:head.length-1}}];
+    ws["!cols"] = widths.map(w=>({wch:w}));
+    ws["A1"].s = T; ws["A2"].s = { font:{name:"TH SarabunPSK",sz:16} };
+    for (let r=3; r<aoa.length; r++) for (let c=0; c<head.length; c++){
+      const a = XLSX.utils.encode_cell({r,c}); ws[a] ??= {t:"s",v:""}; ws[a].s = r===3 ? H : C; }
+    return ws;
+  }
+  // สรุป
+  const divs = $("#divFilter").value ? [$("#divFilter").value] : DIVISIONS;
+  const sum = divs.map((d,i)=>{ const x=list.filter(r=>r.division===d); const m=x.reduce((a,r)=>a+r.durationMin,0);
+    return [i+1,d,x.length,new Set(x.map(r=>r.name)).size,m,+(m/60).toFixed(2)]; });
+  const tm = list.reduce((a,r)=>a+r.durationMin,0);
+  sum.push(["","รวมทั้งสิ้น",list.length,new Set(list.map(r=>r.name)).size,tm,+(tm/60).toFixed(2)]);
+  XLSX.utils.book_append_sheet(wb, sheet(`สรุปการออกนอกสถานที่ (ธุระส่วนตัว) ${ORG_NAME}`,
+    ["ลำดับ","สำนัก/กอง","จำนวนครั้ง","จำนวนคน","รวม (นาที)","รวม (ชั่วโมง)"], sum, [7,32,12,12,12,14]), "สรุป");
+  // รายกอง
+  const head = ["ลำดับ","วันที่","ชื่อ - สกุล","ตำแหน่ง","ขออนุญาตไป","สถานที่","เวลาไป","เวลากลับ","รวม (นาที)"];
+  divs.forEach(d => {
+    const x = list.filter(r=>r.division===d).sort((a,b)=>(a.date+a.timeOut).localeCompare(b.date+b.timeOut));
+    if (!x.length) return;
+    const body = x.map((r,i)=>[i+1, new Date(r.date+"T00:00").toLocaleDateString("th-TH",{dateStyle:"medium"}), r.name, r.position, r.purpose, r.place, r.timeOut, r.timeIn, r.durationMin]);
+    XLSX.utils.book_append_sheet(wb, sheet(`บันทึกการออกนอกสถานที่ · ${d}`, head, body, [7,14,24,22,30,26,9,9,10]), d.slice(0,31));
+  });
+  const tag = { week:"รายสัปดาห์", month:"รายเดือน", year:"รายปี" }[period];
+  XLSX.writeFile(wb, `ออกนอกสถานที่_${tag}_${R.start}_${R.end}.xlsx`);
+};
+</script>
+</body>
+</html>

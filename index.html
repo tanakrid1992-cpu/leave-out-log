@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>บันทึกการออกนอกสถานที่ | เทศบาลตำบลคลองตำหรุ</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="nav">
+    <div class="brand"><div class="logo">🚶</div><div>บันทึกการออกนอกสถานที่<small>กรณีออกไปทำธุระส่วนตัวในเวลาราชการ · เทศบาลตำบลคลองตำหรุ</small></div></div>
+    <a class="btn-ghost" href="dashboard.html">📊 แดชบอร์ด</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" id="formCard">
+    <h2>แบบบันทึกขออนุญาตออกนอกสถานที่</h2>
+    <p class="sub">กรอกข้อมูลให้ครบถ้วนก่อนออกนอกสถานที่ ระบบจะบันทึกเวลาอัตโนมัติ</p>
+    <form id="f" class="grid g2" autocomplete="on">
+      <div><label>ชื่อ - สกุล <span class="req">*</span></label><input name="name" required placeholder="เช่น นายสมชาย ใจดี"></div>
+      <div><label>ตำแหน่ง <span class="req">*</span></label><input name="position" required placeholder="เช่น นักวิชาการคลัง"></div>
+      <div class="full"><label>สำนัก/กอง <span class="req">*</span></label><select name="division" id="division" required><option value="">— เลือกสำนัก/กอง —</option></select></div>
+      <div class="full"><label>ขออนุญาตไป (ธุระ) <span class="req">*</span></label><textarea name="purpose" required placeholder="เช่น ติดต่อธนาคาร / พาบุตรไปโรงพยาบาล"></textarea></div>
+      <div class="full"><label>สถานที่ <span class="req">*</span></label><input name="place" required placeholder="เช่น ธนาคารกรุงไทย สาขาพานทอง"></div>
+      <div><label>วันที่ <span class="req">*</span></label><input type="date" name="date" id="date" required></div>
+      <div class="grid g2" style="gap:12px">
+        <div><label>เวลาไป <span class="req">*</span></label><input type="time" name="timeOut" id="timeOut" required></div>
+        <div><label>เวลากลับ <span class="req">*</span></label><input type="time" name="timeIn" id="timeIn" required></div>
+      </div>
+      <div class="full dur" id="dur">⏱ ระยะเวลา: —</div>
+      <div class="full actions">
+        <button type="reset" class="btn btn-light">ล้างข้อมูล</button>
+        <button type="submit" class="btn btn-pri" id="btnSave">💾 บันทึกข้อมูล</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card success hidden" id="okCard">
+    <div class="ic">✓</div>
+    <h2>บันทึกเรียบร้อย</h2>
+    <p class="sub" id="okText"></p>
+    <button class="btn btn-pri" id="btnNew">+ บันทึกรายการใหม่</button>
+  </section>
+  <footer>© เทศบาลตำบลคลองตำหรุ</footer>
+</main>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { db, COLLECTION, DIVISIONS } from "./js/firebase-config.js";
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const $ = s => document.querySelector(s);
+const f = $("#f");
+DIVISIONS.forEach(d => $("#division").add(new Option(d, d)));
+
+// ค่าเริ่มต้น + จำข้อมูลผู้ใช้เดิม
+const pad = n => String(n).padStart(2, "0");
+const setDefaults = () => {
+  const now = new Date();
+  $("#date").value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  $("#timeOut").value = `${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`;
+  const me = JSON.parse(localStorage.getItem("lol_me") || "{}");
+  ["name","position","division"].forEach(k => me[k] && (f[k].value = me[k]));
+  calc();
+};
+const mins = () => {
+  const [a,b] = [$("#timeOut").value, $("#timeIn").value];
+  if (!a || !b) return null;
+  const t = s => s.split(":").reduce((h,m) => +h*60 + +m);
+  return t(b) - t(a);
+};
+function calc(){
+  const m = mins();
+  $("#dur").textContent = m == null ? "⏱ ระยะเวลา: —" : m <= 0 ? "⚠️ เวลากลับต้องมากกว่าเวลาไป" : `⏱ ระยะเวลา: ${Math.floor(m/60)} ชม. ${m%60} นาที`;
+  $("#dur").style.background = m != null && m <= 0 ? "#fef2f2" : "";
+  $("#dur").style.color = m != null && m <= 0 ? "#b91c1c" : "";
+}
+["#timeOut","#timeIn"].forEach(s => $(s).addEventListener("input", calc));
+f.addEventListener("reset", () => setTimeout(setDefaults));
+
+function toast(msg, err){ const t=$("#toast"); t.textContent=msg; t.className="toast show"+(err?" err":""); setTimeout(()=>t.className="toast",2800); }
+
+f.addEventListener("submit", async e => {
+  e.preventDefault();
+  const m = mins();
+  if (!m || m <= 0) return toast("เวลากลับต้องมากกว่าเวลาไป", true);
+  const d = Object.fromEntries(new FormData(f));
+  Object.keys(d).forEach(k => d[k] = d[k].trim());
+  $("#btnSave").disabled = true; $("#btnSave").textContent = "กำลังบันทึก...";
+  try {
+    await addDoc(collection(db, COLLECTION), { ...d, durationMin: m, createdAt: serverTimestamp() });
+    localStorage.setItem("lol_me", JSON.stringify({ name:d.name, position:d.position, division:d.division }));
+    const th = new Date(d.date).toLocaleDateString("th-TH",{dateStyle:"long"});
+    $("#okText").textContent = `${d.name} (${d.division}) · ${th} เวลา ${d.timeOut}–${d.timeIn} น. · ${d.place}`;
+    $("#formCard").classList.add("hidden"); $("#okCard").classList.remove("hidden");
+  } catch (err) { console.error(err); toast("บันทึกไม่สำเร็จ: " + err.message, true); }
+  $("#btnSave").disabled = false; $("#btnSave").textContent = "💾 บันทึกข้อมูล";
+});
+$("#btnNew").onclick = () => { f.reset(); $("#okCard").classList.add("hidden"); $("#formCard").classList.remove("hidden"); };
+setDefaults();
+</script>
+</body>
+</html>
