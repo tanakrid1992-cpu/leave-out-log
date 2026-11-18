@@ -4,7 +4,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebas
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDovLKo3djdRbs963vqKdbj-geRWyzMTrg",
+  apiKey: "AIzaSyDKY2Lk-OaVRCmP--lj8FLd7vWUdIx2hLY",
   authDomain: "klongtamru-leave-out-log.firebaseapp.com",
   projectId: "klongtamru-leave-out-log",
   storageBucket: "klongtamru-leave-out-log.firebasestorage.app",

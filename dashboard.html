@@ -2,245 +2,291 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>แดชบอร์ด · บันทึกการออกนอกสถานที่</title>
+<title>Smart Dashboard · ออกนอกสถานที่ | เทศบาลตำบลคลองตำหรุ</title>
+<meta name="theme-color" content="#070b1a">
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 </head>
 <body>
-<header class="hero">
-  <div class="nav">
-    <div class="brand"><div class="logo">📊</div><div>แดชบอร์ดการออกนอกสถานที่<small>เทศบาลตำบลคลองตำหรุ</small></div></div>
-    <div style="display:flex;gap:8px">
-      <a class="btn-ghost" href="index.html">📝 แบบบันทึก</a>
-      <a class="btn-ghost hidden" href="#" id="btnLogout">ออกจากระบบ</a>
-    </div>
+<header class="top"><div class="in">
+  <div class="brand"><div class="logo">🧠</div><div><b>Smart Dashboard</b><small>ระบบวิเคราะห์การออกนอกสถานที่ · เทศบาลตำบลคลองตำหรุ</small></div></div>
+  <div class="navl">
+    <div class="clock"><div class="t" id="clk">--:--:--</div><div class="d" id="clkD"></div></div>
+    <a class="chipbtn" href="index.html">📝 แบบบันทึก</a>
+    <button class="chipbtn hidden" id="btnLogout">⎋ ออกจากระบบ</button>
   </div>
-</header>
+</div></header>
 
 <!-- Login -->
 <main class="login hidden" id="loginView">
-  <div class="card">
-    <h2>เข้าสู่ระบบผู้ดูแล</h2>
-    <p class="sub">สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์ดูข้อมูล</p>
+  <div class="glass pad">
+    <div class="logo" style="margin:0 auto 14px;width:56px;height:56px;font-size:26px">🔐</div>
+    <h2 style="text-align:center;margin:0">เข้าสู่ระบบผู้ดูแล</h2>
+    <p class="muted" style="text-align:center;margin:6px 0 20px">สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์ดูข้อมูล</p>
     <form id="loginForm" class="grid">
-      <div><label>อีเมล</label><input type="email" id="email" required></div>
-      <div><label>รหัสผ่าน</label><input type="password" id="pass" required autocomplete="new-password"></div>
-      <button class="btn btn-pri" style="justify-content:center">เข้าสู่ระบบ</button>
+      <div><label>อีเมล</label><input type="email" id="email" required autocomplete="username"></div>
+      <div><label>รหัสผ่าน</label><input type="password" id="pass" required autocomplete="current-password"></div>
+      <button class="btn btn-pri" id="btnLogin">เข้าสู่ระบบ</button>
     </form>
   </div>
 </main>
 
-<!-- Dashboard -->
 <main class="wrap hidden" id="dashView">
-  <section class="card" style="margin-bottom:16px">
+  <!-- ตัวกรอง -->
+  <section class="glass pad" style="margin-bottom:16px">
     <div class="toolbar">
       <div style="flex:0 0 auto"><label>ช่วงเวลา</label>
-        <div class="tabs" id="periodTabs">
-          <button class="tab" data-p="week">สัปดาห์</button>
-          <button class="tab on" data-p="month">เดือน</button>
-          <button class="tab" data-p="year">ปี</button>
-        </div>
+        <div class="tabs" id="periodTabs"><button class="tab" data-p="week">สัปดาห์</button><button class="tab on" data-p="month">เดือน</button><button class="tab" data-p="year">ปี</button></div>
       </div>
-      <div><label>วันที่อ้างอิง</label><input type="date" id="refDate"></div>
+      <div style="flex:0 0 auto;display:flex;gap:6px;align-items:flex-end">
+        <button class="chipbtn" id="prev" title="ก่อนหน้า">‹</button>
+        <div><label>วันที่อ้างอิง</label><input type="date" id="refDate"></div>
+        <button class="chipbtn" id="next" title="ถัดไป">›</button>
+      </div>
       <div><label>สำนัก/กอง</label><select id="divFilter"><option value="">ทุกสำนัก/กอง</option></select></div>
-      <div><label>ค้นหา</label><input id="q" placeholder="ชื่อ, สถานที่, ธุระ..."></div>
-      <div style="flex:0 0 auto"><button class="btn btn-ok" id="btnExport">⬇️ Export Excel</button></div>
+      <div><label>ค้นหาอัจฉริยะ</label><input id="q" placeholder="🔎 ชื่อ, สถานที่, ธุระ..."></div>
+      <div style="flex:0 0 auto"><button class="btn btn-ok" id="btnExport">⬇ Export Excel</button></div>
     </div>
-    <p class="range-lbl" id="rangeLbl" style="margin:12px 0 0"></p>
+    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span class="badge" id="rangeLbl"></span><span class="badge live">Realtime</span>
+    </div>
   </section>
 
+  <!-- KPI -->
   <section class="grid g4" style="margin-bottom:16px">
-    <div class="card kpi"><div class="ic" style="background:#eef2ff">📋</div><div><div class="v" id="kTotal">0</div><div class="l">รายการทั้งหมด</div></div></div>
-    <div class="card kpi"><div class="ic" style="background:#ecfeff">👥</div><div><div class="v" id="kPeople">0</div><div class="l">จำนวนบุคลากร</div></div></div>
-    <div class="card kpi"><div class="ic" style="background:#fffbeb">⏱</div><div><div class="v" id="kHours">0</div><div class="l">ชั่วโมงรวม</div></div></div>
-    <div class="card kpi"><div class="ic" style="background:#fdf2f8">📈</div><div><div class="v" id="kAvg">0</div><div class="l">เฉลี่ย (นาที/ครั้ง)</div></div></div>
+    <div class="glass pad kpi" style="--c:#7c5cff"><span class="ico">📋</span><div class="l">จำนวนครั้ง</div><div class="v" id="kTotal">0</div><div class="dl" id="dTotal"></div></div>
+    <div class="glass pad kpi" style="--c:#22d3ee"><span class="ico">👥</span><div class="l">จำนวนบุคลากร</div><div class="v" id="kPeople">0</div><div class="dl" id="dPeople"></div></div>
+    <div class="glass pad kpi" style="--c:#f472b6"><span class="ico">⏱</span><div class="l">ชั่วโมงรวม</div><div class="v" id="kHours">0</div><div class="dl" id="dHours"></div></div>
+    <div class="glass pad kpi" style="--c:#34d399"><span class="ico">🟢</span><div class="l">กำลังออกนอกสถานที่ขณะนี้</div><div class="v" id="kNow">0</div><div class="dl">อัปเดตอัตโนมัติ</div></div>
   </section>
 
-  <section class="grid g2" style="margin-bottom:16px">
-    <div class="card"><h3 style="margin-top:0">แนวโน้มจำนวนครั้ง</h3><div class="chart-box"><canvas id="cTrend"></canvas></div></div>
-    <div class="card"><h3 style="margin-top:0">สัดส่วนตามสำนัก/กอง</h3><div class="chart-box"><canvas id="cDiv"></canvas></div></div>
+  <!-- AI + Live -->
+  <section class="grid g3" style="margin-bottom:16px">
+    <div class="glass pad s2"><h3 class="ttl"><span class="ic">✨</span><span class="ai-h">AI Insights · บทวิเคราะห์อัตโนมัติ</span></h3><div class="ai" id="ai"></div></div>
+    <div class="glass pad"><h3 class="ttl"><span class="ic">📡</span>ออกนอกสถานที่วันนี้</h3><div class="now-list" id="nowList"></div></div>
   </section>
 
-  <section class="grid g2" style="margin-bottom:16px">
-    <div class="card"><h3 style="margin-top:0">ชั่วโมงรวมแยกสำนัก/กอง</h3><div class="divbars" id="divBars"></div></div>
-    <div class="card"><h3 style="margin-top:0">บุคลากรที่ออกบ่อยที่สุด (Top 10)</h3><div class="tbl-wrap" style="max-height:330px"><table><thead><tr><th>#</th><th>ชื่อ - สกุล</th><th>สำนัก/กอง</th><th>ครั้ง</th><th>ชม.</th></tr></thead><tbody id="topBody"></tbody></table></div></div>
+  <section class="grid g3" style="margin-bottom:16px">
+    <div class="glass pad s2"><h3 class="ttl"><span class="ic">📈</span>แนวโน้มจำนวนครั้ง (แยกสำนัก/กอง)</h3><div class="chart"><canvas id="cTrend"></canvas></div></div>
+    <div class="glass pad"><h3 class="ttl"><span class="ic">🍩</span>สัดส่วนตามสำนัก/กอง</h3><div class="chart"><canvas id="cDiv"></canvas></div></div>
   </section>
 
-  <section class="card">
-    <h3 style="margin-top:0">รายการทั้งหมด <span class="pill" id="cnt">0</span></h3>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>วันที่</th><th>ชื่อ - สกุล</th><th>ตำแหน่ง</th><th>สำนัก/กอง</th><th>ขออนุญาตไป</th><th>สถานที่</th><th>เวลา</th><th>นาที</th><th></th></tr></thead>
+  <section class="grid g3" style="margin-bottom:16px">
+    <div class="glass pad"><h3 class="ttl"><span class="ic">🔥</span>Heatmap วัน × ช่วงเวลาที่ออก</h3><div class="heat" id="heat"></div></div>
+    <div class="glass pad"><h3 class="ttl"><span class="ic">⏳</span>ชั่วโมงรวมรายสำนัก/กอง</h3><div class="bars" id="bars"></div></div>
+    <div class="glass pad"><h3 class="ttl"><span class="ic">🏅</span>ออกบ่อยที่สุด (Top 10)</h3><div class="tbl" style="max-height:310px"><table><thead><tr><th>#</th><th>ชื่อ</th><th>ครั้ง</th><th>ชม.</th></tr></thead><tbody id="topBody"></tbody></table></div></div>
+  </section>
+
+  <section class="glass pad">
+    <h3 class="ttl"><span class="ic">🗂️</span>รายการทั้งหมด <span class="badge" id="cnt">0</span></h3>
+    <div class="tbl"><table>
+      <thead><tr><th>วันที่</th><th>ชื่อ - สกุล</th><th>สำนัก/กอง</th><th>ขออนุญาตไป</th><th>สถานที่</th><th>เวลา</th><th>นาที</th><th></th></tr></thead>
       <tbody id="tbody"></tbody>
     </table></div>
   </section>
-  <footer>© เทศบาลตำบลคลองตำหรุ</footer>
+  <footer>© เทศบาลตำบลคลองตำหรุ · Smart Leave-Out System</footer>
 </main>
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import { db, auth, COLLECTION, DIVISIONS, DIV_COLORS, ORG_NAME } from "./js/firebase-config.js";
-import { collection, query, where, orderBy, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, query, where, orderBy, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const $ = s => document.querySelector(s);
-const pad = n => String(n).padStart(2,"0");
-const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const thDate = s => new Date(s+"T00:00").toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"});
-const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const toast = (m,e)=>{const t=$("#toast");t.textContent=m;t.className="toast show"+(e?" err":"");setTimeout(()=>t.className="toast",2800);};
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const toMin = s => { const [h, m] = s.split(":"); return +h * 60 + +m; };
+const thD = s => new Date(s + "T00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const col = d => DIV_COLORS[DIVISIONS.indexOf(d)] || "#7c5cff";
+const hrs = m => (m / 60).toFixed(1);
+const toast = (m, e) => { const t = $("#toast"); t.textContent = m; t.className = "toast show" + (e ? " err" : ""); setTimeout(() => t.className = "toast", 3500); };
+const DAYS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
+const LIMIT = { week: 2, month: 4, year: 30 }; // เกณฑ์แจ้งเตือนออกบ่อย
 
-let period = "month", rows = [], view = [], charts = {};
-DIVISIONS.forEach(d => $("#divFilter").add(new Option(d,d)));
+setInterval(() => { const d = new Date(); $("#clk").textContent = d.toLocaleTimeString("th-TH", { hour12: false }); $("#clkD").textContent = d.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }, 1000);
+DIVISIONS.forEach(d => $("#divFilter").add(new Option(d, d)));
 $("#refDate").value = ymd(new Date());
+Chart.defaults.color = "#8d97c2"; Chart.defaults.font.family = "Sarabun"; Chart.defaults.borderColor = "rgba(255,255,255,.06)";
+
+let period = "month", cur = [], prev = [], today = [], charts = {}, unsub = null, unsubToday = null;
 
 // ===== Auth =====
 onAuthStateChanged(auth, u => {
   $("#loginView").classList.toggle("hidden", !!u);
   $("#dashView").classList.toggle("hidden", !u);
   $("#btnLogout").classList.toggle("hidden", !u);
-  if (u) load();
+  if (u) { load(); watchToday(); }
 });
 $("#loginForm").onsubmit = async e => {
-  e.preventDefault();
-  try { await signInWithEmailAndPassword(auth, $("#email").value, $("#pass").value); }
-  catch (err) { toast((/invalid|wrong|not-found/.test(err.code) ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : "เข้าสู่ระบบไม่สำเร็จ") + " (" + err.code + ")", true); }
+  e.preventDefault(); const b = $("#btnLogin"); b.disabled = true; b.textContent = "กำลังตรวจสอบ...";
+  try { await signInWithEmailAndPassword(auth, $("#email").value.trim(), $("#pass").value); }
+  catch (err) {
+    const m = { "auth/invalid-credential": "อีเมลหรือรหัสผ่านไม่ถูกต้อง", "auth/wrong-password": "รหัสผ่านไม่ถูกต้อง", "auth/user-not-found": "ไม่พบบัญชีนี้", "auth/too-many-requests": "ลองผิดหลายครั้ง กรุณารอสักครู่" }[err.code];
+    toast((m || "เข้าสู่ระบบไม่สำเร็จ") + " (" + err.code + ")", true);
+  }
+  b.disabled = false; b.textContent = "เข้าสู่ระบบ";
 };
-$("#btnLogout").onclick = e => { e.preventDefault(); signOut(auth); };
+$("#btnLogout").onclick = () => signOut(auth);
 
 // ===== ช่วงเวลา =====
-function range(){
-  const r = new Date($("#refDate").value+"T00:00");
+function range(ref = new Date($("#refDate").value + "T00:00"), p = period) {
   let s, e, label;
-  if (period === "week"){ // จันทร์–อาทิตย์
-    s = new Date(r); s.setDate(r.getDate() - ((r.getDay()+6)%7));
-    e = new Date(s); e.setDate(s.getDate()+6);
-    label = `สัปดาห์ ${thDate(ymd(s))} – ${thDate(ymd(e))}`;
-  } else if (period === "month"){
-    s = new Date(r.getFullYear(), r.getMonth(), 1); e = new Date(r.getFullYear(), r.getMonth()+1, 0);
-    label = "เดือน" + s.toLocaleDateString("th-TH",{month:"long",year:"numeric"});
-  } else {
-    s = new Date(r.getFullYear(),0,1); e = new Date(r.getFullYear(),11,31);
-    label = `ปี พ.ศ. ${r.getFullYear()+543}`;
-  }
+  if (p === "week") { s = new Date(ref); s.setDate(ref.getDate() - ((ref.getDay() + 6) % 7)); e = new Date(s); e.setDate(s.getDate() + 6); label = `สัปดาห์ ${thD(ymd(s))} – ${thD(ymd(e))}`; }
+  else if (p === "month") { s = new Date(ref.getFullYear(), ref.getMonth(), 1); e = new Date(ref.getFullYear(), ref.getMonth() + 1, 0); label = "เดือน" + s.toLocaleDateString("th-TH", { month: "long", year: "numeric" }); }
+  else { s = new Date(ref.getFullYear(), 0, 1); e = new Date(ref.getFullYear(), 11, 31); label = `ปี พ.ศ. ${ref.getFullYear() + 543}`; }
   return { s, e, start: ymd(s), end: ymd(e), label };
 }
+function shift(dir) {
+  const r = new Date($("#refDate").value + "T00:00");
+  if (period === "week") r.setDate(r.getDate() + 7 * dir); else if (period === "month") r.setMonth(r.getMonth() + dir); else r.setFullYear(r.getFullYear() + dir);
+  $("#refDate").value = ymd(r); load();
+}
 
-async function load(){
-  const R = range();
+function load() {
+  const R = range(), pr = new Date(R.s); pr.setDate(pr.getDate() - 1); const P = range(pr);
   $("#rangeLbl").textContent = "📅 " + R.label;
-  try {
-    const snap = await getDocs(query(collection(db, COLLECTION), where("date",">=",R.start), where("date","<=",R.end), orderBy("date","desc")));
-    rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    rows.sort((a,b) => (b.date+b.timeOut).localeCompare(a.date+a.timeOut));
-  } catch (err) { console.error(err); toast("โหลดข้อมูลไม่สำเร็จ: "+err.message, true); rows = []; }
-  render();
+  unsub?.();
+  unsub = onSnapshot(query(collection(db, COLLECTION), where("date", ">=", P.start), where("date", "<=", R.end), orderBy("date", "desc")), snap => {
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cur = all.filter(r => r.date >= R.start).sort((a, b) => (b.date + b.timeOut).localeCompare(a.date + a.timeOut));
+    prev = all.filter(r => r.date < R.start);
+    render();
+  }, err => { console.error(err); toast("โหลดข้อมูลไม่สำเร็จ: " + (err.code || err.message), true); });
+}
+function watchToday() {
+  unsubToday?.();
+  unsubToday = onSnapshot(query(collection(db, COLLECTION), where("date", "==", ymd(new Date()))), s => { today = s.docs.map(d => d.data()); renderNow(); });
+  setInterval(renderNow, 30000);
 }
 
-function filtered(){
-  const dv = $("#divFilter").value, q = $("#q").value.trim().toLowerCase();
-  return rows.filter(r => (!dv || r.division===dv) &&
-    (!q || [r.name,r.position,r.place,r.purpose].join(" ").toLowerCase().includes(q)));
+const fil = list => { const dv = $("#divFilter").value, q = $("#q").value.trim().toLowerCase();
+  return list.filter(r => (!dv || r.division === dv) && (!q || [r.name, r.position, r.place, r.purpose, r.division].join(" ").toLowerCase().includes(q))); };
+const sum = l => l.reduce((a, r) => a + (r.durationMin || 0), 0);
+function delta(el, a, b) {
+  if (!b) { el.textContent = a ? "ข้อมูลใหม่ในช่วงนี้" : "—"; el.className = "dl"; return; }
+  const p = Math.round((a - b) / b * 100);
+  el.textContent = `${p > 0 ? "▲" : p < 0 ? "▼" : "■"} ${Math.abs(p)}% จากช่วงก่อนหน้า`; el.className = "dl " + (p > 0 ? "up" : p < 0 ? "dn" : "");
 }
 
-function render(){
-  view = filtered();
-  const R = range();
-  const totalMin = view.reduce((a,r)=>a+(r.durationMin||0),0);
-  $("#kTotal").textContent = view.length.toLocaleString();
-  $("#kPeople").textContent = new Set(view.map(r=>r.name)).size;
-  $("#kHours").textContent = (totalMin/60).toFixed(1);
-  $("#kAvg").textContent = view.length ? Math.round(totalMin/view.length) : 0;
-  $("#cnt").textContent = view.length;
+function renderNow() {
+  const n = new Date(), m = n.getHours() * 60 + n.getMinutes(), dv = $("#divFilter").value;
+  const list = today.filter(r => !dv || r.division === dv).sort((a, b) => a.timeOut.localeCompare(b.timeOut));
+  const out = list.filter(r => toMin(r.timeOut) <= m && m < toMin(r.timeIn));
+  $("#kNow").textContent = out.length;
+  $("#nowList").innerHTML = list.map(r => {
+    const a = toMin(r.timeOut), b = toMin(r.timeIn), st = m < a ? ["รอออก", "#fbbf24"] : m < b ? ["กำลังออก", "#34d399"] : ["กลับแล้ว", "#8d97c2"];
+    const pg = Math.max(0, Math.min(100, (m - a) / (b - a) * 100));
+    return `<div class="now"><div class="avatar" style="background:${col(r.division)}">${esc(r.name.replace(/^(นาย|นางสาว|นาง)\s*/, "").charAt(0))}</div>
+      <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</b><span class="dp" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></div>
+      <div class="muted" style="font-size:12.5px">${r.timeOut}–${r.timeIn} · ${esc(r.place)}</div><div class="pg"><i style="width:${pg}%"></i></div></div></div>`;
+  }).join("") || `<div class="muted" style="text-align:center;padding:30px 0">วันนี้ยังไม่มีผู้ออกนอกสถานที่ 🎉</div>`;
+}
+
+function render() {
+  const v = fil(cur), pv = fil(prev), R = range(), tm = sum(v);
+  $("#kTotal").textContent = v.length; delta($("#dTotal"), v.length, pv.length);
+  $("#kPeople").textContent = new Set(v.map(r => r.name)).size; delta($("#dPeople"), new Set(v.map(r => r.name)).size, new Set(pv.map(r => r.name)).size);
+  $("#kHours").textContent = hrs(tm); delta($("#dHours"), tm, sum(pv));
+  $("#cnt").textContent = v.length;
+  renderNow();
 
   // ตาราง
-  $("#tbody").innerHTML = view.map(r => `<tr>
-    <td>${thDate(r.date)}</td><td><b>${esc(r.name)}</b></td><td class="muted">${esc(r.position)}</td>
-    <td><span class="pill" style="background:${DIV_COLORS[DIVISIONS.indexOf(r.division)]}1a;color:${DIV_COLORS[DIVISIONS.indexOf(r.division)]}">${esc(r.division)}</span></td>
-    <td>${esc(r.purpose)}</td><td>${esc(r.place)}</td><td>${r.timeOut}–${r.timeIn}</td><td>${r.durationMin}</td>
-    <td><button class="del" title="ลบ" data-id="${r.id}">🗑</button></td></tr>`).join("") ||
-    `<tr><td colspan="9" class="muted" style="text-align:center;padding:30px">ไม่มีข้อมูลในช่วงเวลานี้</td></tr>`;
+  const cntBy = {}; v.forEach(r => cntBy[r.name] = (cntBy[r.name] || 0) + 1);
+  $("#tbody").innerHTML = v.map(r => `<tr><td style="white-space:nowrap">${thD(r.date)}</td>
+    <td><b>${esc(r.name)}</b>${cntBy[r.name] >= LIMIT[period] ? ` <span class="flag" title="ออกบ่อยกว่าเกณฑ์">⚠ ${cntBy[r.name]} ครั้ง</span>` : ""}<div class="muted" style="font-size:12.5px">${esc(r.position)}</div></td>
+    <td><span class="dp" style="background:${col(r.division)}22;color:${col(r.division)}">${esc(r.division)}</span></td>
+    <td>${esc(r.purpose)}</td><td>${esc(r.place)}</td><td style="white-space:nowrap">${r.timeOut}–${r.timeIn}</td><td>${r.durationMin}</td>
+    <td><button class="del" data-id="${r.id}" title="ลบ">🗑</button></td></tr>`).join("") ||
+    `<tr><td colspan="8" class="muted" style="text-align:center;padding:34px">ไม่มีข้อมูลในช่วงเวลานี้</td></tr>`;
 
-  // แยกกอง
-  const byDiv = DIVISIONS.map(d => { const x = view.filter(r=>r.division===d); return { d, n:x.length, m:x.reduce((a,r)=>a+r.durationMin,0) }; });
-  const maxM = Math.max(1,...byDiv.map(x=>x.m));
-  $("#divBars").innerHTML = byDiv.map((x,i)=>`<div class="row"><div class="nm">${x.d}</div><div class="bar"><i style="width:${x.m/maxM*100}%;background:${DIV_COLORS[i]}"></i></div><div class="n">${(x.m/60).toFixed(1)}</div></div>`).join("");
+  // รายกอง
+  const byDiv = DIVISIONS.map(d => { const x = v.filter(r => r.division === d); return { d, n: x.length, m: sum(x), p: new Set(x.map(r => r.name)).size }; });
+  const mx = Math.max(1, ...byDiv.map(x => x.m));
+  $("#bars").innerHTML = byDiv.map(x => `<div class="row"><span>${x.d}</span><div class="bar"><i style="width:${x.m / mx * 100}%;background:${col(x.d)}"></i></div><span class="n">${hrs(x.m)}</span></div>`).join("");
 
-  // Top 10
-  const ppl = {};
-  view.forEach(r => { const k=r.name+"|"+r.division; ppl[k] ??= { name:r.name, div:r.division, n:0, m:0 }; ppl[k].n++; ppl[k].m+=r.durationMin; });
-  $("#topBody").innerHTML = Object.values(ppl).sort((a,b)=>b.n-a.n||b.m-a.m).slice(0,10)
-    .map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td class="muted">${esc(p.div)}</td><td><b>${p.n}</b></td><td>${(p.m/60).toFixed(1)}</td></tr>`).join("") ||
-    `<tr><td colspan="5" class="muted" style="text-align:center">—</td></tr>`;
+  // Top
+  const ppl = {}; v.forEach(r => { const k = r.name; ppl[k] ??= { name: r.name, div: r.division, n: 0, m: 0 }; ppl[k].n++; ppl[k].m += r.durationMin; });
+  const top = Object.values(ppl).sort((a, b) => b.n - a.n || b.m - a.m);
+  $("#topBody").innerHTML = top.slice(0, 10).map((p, i) => `<tr><td>${["🥇", "🥈", "🥉"][i] || i + 1}</td><td>${esc(p.name)}<div class="muted" style="font-size:12px">${esc(p.div)}</div></td><td><b>${p.n}</b>${p.n >= LIMIT[period] ? " ⚠" : ""}</td><td>${hrs(p.m)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted" style="text-align:center">—</td></tr>`;
 
-  // แนวโน้ม
-  let labels=[], keys=[];
-  if (period==="year"){
-    for(let m=0;m<12;m++){ keys.push(pad(m+1)); labels.push(new Date(2000,m,1).toLocaleDateString("th-TH",{month:"short"})); }
-  } else {
-    for(let d=new Date(R.s); d<=R.e; d.setDate(d.getDate()+1)){ keys.push(ymd(d)); labels.push(d.getDate()+(period==="week"?" "+d.toLocaleDateString("th-TH",{weekday:"short"}):"")); }
-  }
-  const keyOf = r => period==="year" ? r.date.slice(5,7) : r.date;
-  const trendSets = DIVISIONS.map((d,i)=>({ label:d, backgroundColor:DIV_COLORS[i], borderRadius:4,
-    data: keys.map(k => view.filter(r=>r.division===d && keyOf(r)===k).length) })).filter(s=>s.data.some(v=>v));
-  draw("cTrend","bar",{ labels, datasets:trendSets },{ scales:{ x:{stacked:true,grid:{display:false}}, y:{stacked:true,beginAtZero:true,ticks:{precision:0}} }, plugins:{legend:{display:false}} });
-  draw("cDiv","doughnut",{ labels:DIVISIONS, datasets:[{ data:byDiv.map(x=>x.n), backgroundColor:DIV_COLORS, borderWidth:2 }] },
-    { cutout:"62%", plugins:{ legend:{ position:"right", labels:{ boxWidth:12, font:{family:"Sarabun"} } } } });
+  // Heatmap จ–ศ × 08–17
+  const H = Array.from({ length: 5 }, () => Array(10).fill(0));
+  v.forEach(r => { const wd = new Date(r.date + "T00:00").getDay(), h = +r.timeOut.slice(0, 2); if (wd >= 1 && wd <= 5 && h >= 8 && h <= 17) H[wd - 1][h - 8]++; });
+  const hm = Math.max(1, ...H.flat());
+  $("#heat").innerHTML = `<span></span>` + Array.from({ length: 10 }, (_, i) => `<span class="h">${pad(i + 8)}</span>`).join("") +
+    H.map((row, i) => `<span class="h">${DAYS[i + 1]}</span>` + row.map(c => `<span class="c" title="${c} ครั้ง" style="background:rgba(124,92,255,${c ? .15 + c / hm * .85 : .04})">${c || ""}</span>`).join("")).join("");
+
+  // กราฟแนวโน้ม
+  let labels = [], keys = [];
+  if (period === "year") for (let m = 0; m < 12; m++) { keys.push(pad(m + 1)); labels.push(new Date(2000, m, 1).toLocaleDateString("th-TH", { month: "short" })); }
+  else for (let d = new Date(R.s); d <= R.e; d.setDate(d.getDate() + 1)) { keys.push(ymd(d)); labels.push(period === "week" ? DAYS[d.getDay()] + " " + d.getDate() : d.getDate()); }
+  const kf = r => period === "year" ? r.date.slice(5, 7) : r.date;
+  const sets = DIVISIONS.map(d => ({ label: d, backgroundColor: col(d), borderRadius: 6, maxBarThickness: 34, data: keys.map(k => v.filter(r => r.division === d && kf(r) === k).length) })).filter(s => s.data.some(Boolean));
+  draw("cTrend", "bar", { labels, datasets: sets }, { scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } });
+  draw("cDiv", "doughnut", { labels: DIVISIONS, datasets: [{ data: byDiv.map(x => x.n), backgroundColor: DIVISIONS.map(col), borderColor: "#0b1126", borderWidth: 3, hoverOffset: 8 }] },
+    { cutout: "68%", plugins: { legend: { position: "bottom", labels: { boxWidth: 10, padding: 10, font: { size: 11.5 } } } } });
+
+  insights(v, pv, byDiv, top, H);
 }
-function draw(id,type,data,options){
-  charts[id]?.destroy();
-  Chart.defaults.font.family = "Sarabun";
-  charts[id] = new Chart($("#"+id), { type, data, options:{ responsive:true, maintainAspectRatio:false, ...options } });
+function draw(id, type, data, options) { charts[id]?.destroy(); charts[id] = new Chart($("#" + id), { type, data, options: { responsive: true, maintainAspectRatio: false, ...options } }); }
+
+// ===== AI Insights (วิเคราะห์ตามกฎจากข้อมูลจริง) =====
+function insights(v, pv, byDiv, top, H) {
+  const out = [], P = { week: "สัปดาห์", month: "เดือน", year: "ปี" }[period];
+  if (!v.length) { $("#ai").innerHTML = `<div class="it"><i>💤</i><span>ยังไม่มีข้อมูลใน${P}นี้ ระบบจะวิเคราะห์ให้อัตโนมัติเมื่อมีการบันทึก</span></div>`; return; }
+  const tm = sum(v);
+  if (pv.length) { const p = Math.round((v.length - pv.length) / pv.length * 100);
+    out.push([p > 20 ? "📈" : p < -20 ? "📉" : "➖", `${P}นี้มีการออกนอกสถานที่ <b>${v.length} ครั้ง</b> ${p === 0 ? "เท่ากับ" : p > 0 ? `<b style="color:#fbbf24">เพิ่มขึ้น ${p}%</b> จาก` : `<b style="color:#34d399">ลดลง ${-p}%</b> จาก`}${P}ก่อนหน้า (${pv.length} ครั้ง)`]); }
+  const td = [...byDiv].sort((a, b) => b.n - a.n)[0];
+  if (td.n) out.push(["🏢", `<b>${td.d}</b> ออกนอกสถานที่มากที่สุด ${td.n} ครั้ง คิดเป็น <b>${Math.round(td.n / v.length * 100)}%</b> ของทั้งหมด รวม ${hrs(td.m)} ชั่วโมง`]);
+  let best = [0, 0, 0]; H.forEach((r, i) => r.forEach((c, j) => c > best[0] && (best = [c, i, j])));
+  const wd = [1, 2, 3, 4, 5].map(i => v.filter(r => new Date(r.date + "T00:00").getDay() === i).length), wdi = wd.indexOf(Math.max(...wd));
+  if (best[0]) out.push(["⏰", `ช่วงเวลาที่ออกบ่อยที่สุดคือ <b>${pad(best[2] + 8)}:00–${pad(best[2] + 9)}:00 น.</b> และวันที่ออกบ่อยที่สุดคือ <b>วัน${["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์"][wdi]}</b>`]);
+  const over = top.filter(p => p.n >= LIMIT[period]);
+  if (over.length) out.push(["⚠️", `มีบุคลากร <b>${over.length} คน</b> ออกนอกสถานที่ตั้งแต่ ${LIMIT[period]} ครั้งขึ้นไปใน${P}นี้ เช่น ${over.slice(0, 3).map(p => `${esc(p.name)} (${p.n} ครั้ง)`).join(", ")} — ควรติดตาม`]);
+  else out.push(["✅", `ไม่มีบุคลากรที่ออกนอกสถานที่เกินเกณฑ์ (${LIMIT[period]} ครั้ง/${P})`]);
+  const avg = Math.round(tm / v.length), lg = [...v].sort((a, b) => b.durationMin - a.durationMin)[0];
+  out.push(["⏱", `ใช้เวลาเฉลี่ย <b>${avg} นาที/ครั้ง</b> · ครั้งที่นานที่สุด ${hrs(lg.durationMin)} ชม. (${esc(lg.name)}, ${thD(lg.date)})`]);
+  const lunch = v.filter(r => toMin(r.timeOut) < 780 && toMin(r.timeIn) > 720).length, offh = v.filter(r => toMin(r.timeOut) < 510 || toMin(r.timeIn) > 990).length;
+  if (lunch || offh) out.push(["🍱", `${lunch} ครั้ง (${Math.round(lunch / v.length * 100)}%) คาบเกี่ยวช่วงพักกลางวัน${offh ? ` และ ${offh} ครั้งมีช่วงเวลานอกเวลาราชการ` : ""}`]);
+  const pc = {}; v.forEach(r => pc[r.place] = (pc[r.place] || 0) + 1); const tp = Object.entries(pc).sort((a, b) => b[1] - a[1])[0];
+  if (tp[1] > 1) out.push(["📍", `สถานที่ที่ไปบ่อยที่สุดคือ <b>${esc(tp[0])}</b> (${tp[1]} ครั้ง)`]);
+  $("#ai").innerHTML = out.map(([i, t], k) => `<div class="it" style="animation-delay:${k * 70}ms"><i>${i}</i><span>${t}</span></div>`).join("");
 }
 
 // ===== Events =====
-$("#periodTabs").onclick = e => { const b=e.target.closest(".tab"); if(!b) return;
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t===b)); period=b.dataset.p; load(); };
-$("#refDate").onchange = load;
-$("#divFilter").onchange = render;
-$("#q").oninput = render;
-$("#tbody").onclick = async e => { const b=e.target.closest(".del"); if(!b) return;
-  if(!confirm("ยืนยันลบรายการนี้?")) return;
-  try { await deleteDoc(doc(db,COLLECTION,b.dataset.id)); rows=rows.filter(r=>r.id!==b.dataset.id); render(); toast("ลบเรียบร้อย"); }
-  catch(err){ toast("ลบไม่สำเร็จ: "+err.message,true); } };
+$("#periodTabs").onclick = e => { const b = e.target.closest(".tab"); if (!b) return; document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t === b)); period = b.dataset.p; load(); };
+$("#refDate").onchange = load; $("#prev").onclick = () => shift(-1); $("#next").onclick = () => shift(1);
+$("#divFilter").onchange = render; $("#q").oninput = render;
+$("#tbody").onclick = async e => { const b = e.target.closest(".del"); if (!b || !confirm("ยืนยันลบรายการนี้?")) return;
+  try { await deleteDoc(doc(db, COLLECTION, b.dataset.id)); toast("ลบเรียบร้อย"); } catch (err) { toast("ลบไม่สำเร็จ: " + (err.code || err.message), true); } };
 
-// ===== Export Excel (แยกชีตตามสำนัก/กอง + สรุป) =====
+// ===== Export Excel: ชีตสรุป + ชีตแยกแต่ละสำนัก/กอง =====
 $("#btnExport").onclick = () => {
-  const R = range(), list = view;
+  const R = range(), list = fil(cur);
   if (!list.length) return toast("ไม่มีข้อมูลให้ export", true);
-  const wb = XLSX.utils.book_new();
-  const H = { font:{bold:true,color:{rgb:"FFFFFF"},name:"TH SarabunPSK",sz:16}, fill:{fgColor:{rgb:"4F46E5"}}, alignment:{horizontal:"center",vertical:"center",wrapText:true}, border:bd() };
-  const C = { font:{name:"TH SarabunPSK",sz:16}, alignment:{vertical:"top",wrapText:true}, border:bd() };
-  const T = { font:{bold:true,name:"TH SarabunPSK",sz:18} };
-  function bd(){ const s={style:"thin",color:{rgb:"CBD5E1"}}; return {top:s,bottom:s,left:s,right:s}; }
-  function sheet(title, head, body, widths){
-    const aoa = [[title],[`ช่วงเวลา: ${R.label}`],[], head, ...body];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!merges"] = [{s:{r:0,c:0},e:{r:0,c:head.length-1}},{s:{r:1,c:0},e:{r:1,c:head.length-1}}];
-    ws["!cols"] = widths.map(w=>({wch:w}));
-    ws["A1"].s = T; ws["A2"].s = { font:{name:"TH SarabunPSK",sz:16} };
-    for (let r=3; r<aoa.length; r++) for (let c=0; c<head.length; c++){
-      const a = XLSX.utils.encode_cell({r,c}); ws[a] ??= {t:"s",v:""}; ws[a].s = r===3 ? H : C; }
+  const wb = XLSX.utils.book_new(), F = { name: "TH SarabunPSK", sz: 16 };
+  const bd = (() => { const s = { style: "thin", color: { rgb: "CBD5E1" } }; return { top: s, bottom: s, left: s, right: s }; })();
+  const H = { font: { ...F, bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "5B47E0" } }, alignment: { horizontal: "center", vertical: "center", wrapText: true }, border: bd };
+  const C = { font: F, alignment: { vertical: "top", wrapText: true }, border: bd };
+  function sheet(title, head, body, widths) {
+    const aoa = [[title], [`ช่วงเวลา: ${R.label}`], [], head, ...body], ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!merges"] = [0, 1].map(r => ({ s: { r, c: 0 }, e: { r, c: head.length - 1 } })); ws["!cols"] = widths.map(w => ({ wch: w }));
+    ws.A1.s = { font: { ...F, sz: 18, bold: true } }; ws.A2.s = { font: F };
+    for (let r = 3; r < aoa.length; r++) for (let c = 0; c < head.length; c++) { const a = XLSX.utils.encode_cell({ r, c }); ws[a] ??= { t: "s", v: "" }; ws[a].s = r === 3 ? H : C; }
     return ws;
   }
-  // สรุป
   const divs = $("#divFilter").value ? [$("#divFilter").value] : DIVISIONS;
-  const sum = divs.map((d,i)=>{ const x=list.filter(r=>r.division===d); const m=x.reduce((a,r)=>a+r.durationMin,0);
-    return [i+1,d,x.length,new Set(x.map(r=>r.name)).size,m,+(m/60).toFixed(2)]; });
-  const tm = list.reduce((a,r)=>a+r.durationMin,0);
-  sum.push(["","รวมทั้งสิ้น",list.length,new Set(list.map(r=>r.name)).size,tm,+(tm/60).toFixed(2)]);
-  XLSX.utils.book_append_sheet(wb, sheet(`สรุปการออกนอกสถานที่ (ธุระส่วนตัว) ${ORG_NAME}`,
-    ["ลำดับ","สำนัก/กอง","จำนวนครั้ง","จำนวนคน","รวม (นาที)","รวม (ชั่วโมง)"], sum, [7,32,12,12,12,14]), "สรุป");
-  // รายกอง
-  const head = ["ลำดับ","วันที่","ชื่อ - สกุล","ตำแหน่ง","ขออนุญาตไป","สถานที่","เวลาไป","เวลากลับ","รวม (นาที)"];
-  divs.forEach(d => {
-    const x = list.filter(r=>r.division===d).sort((a,b)=>(a.date+a.timeOut).localeCompare(b.date+b.timeOut));
-    if (!x.length) return;
-    const body = x.map((r,i)=>[i+1, new Date(r.date+"T00:00").toLocaleDateString("th-TH",{dateStyle:"medium"}), r.name, r.position, r.purpose, r.place, r.timeOut, r.timeIn, r.durationMin]);
-    XLSX.utils.book_append_sheet(wb, sheet(`บันทึกการออกนอกสถานที่ · ${d}`, head, body, [7,14,24,22,30,26,9,9,10]), d.slice(0,31));
-  });
-  const tag = { week:"รายสัปดาห์", month:"รายเดือน", year:"รายปี" }[period];
-  XLSX.writeFile(wb, `ออกนอกสถานที่_${tag}_${R.start}_${R.end}.xlsx`);
+  const rows = divs.map((d, i) => { const x = list.filter(r => r.division === d), m = sum(x); return [i + 1, d, x.length, new Set(x.map(r => r.name)).size, m, +(m / 60).toFixed(2)]; });
+  const tm = sum(list); rows.push(["", "รวมทั้งสิ้น", list.length, new Set(list.map(r => r.name)).size, tm, +(tm / 60).toFixed(2)]);
+  XLSX.utils.book_append_sheet(wb, sheet(`สรุปการออกนอกสถานที่ (ธุระส่วนตัว) ${ORG_NAME}`, ["ลำดับ", "สำนัก/กอง", "จำนวนครั้ง", "จำนวนคน", "รวม (นาที)", "รวม (ชั่วโมง)"], rows, [7, 32, 12, 12, 12, 14]), "สรุป");
+  const head = ["ลำดับ", "วันที่", "ชื่อ - สกุล", "ตำแหน่ง", "ขออนุญาตไป", "สถานที่", "เวลาไป", "เวลากลับ", "รวม (นาที)"];
+  divs.forEach(d => { const x = list.filter(r => r.division === d).sort((a, b) => (a.date + a.timeOut).localeCompare(b.date + b.timeOut)); if (!x.length) return;
+    XLSX.utils.book_append_sheet(wb, sheet(`บันทึกการออกนอกสถานที่ · ${d}`, head, x.map((r, i) => [i + 1, new Date(r.date + "T00:00").toLocaleDateString("th-TH", { dateStyle: "medium" }), r.name, r.position, r.purpose, r.place, r.timeOut, r.timeIn, r.durationMin]), [7, 14, 24, 22, 30, 26, 9, 9, 10]), d.slice(0, 31)); });
+  XLSX.writeFile(wb, `ออกนอกสถานที่_${{ week: "รายสัปดาห์", month: "รายเดือน", year: "รายปี" }[period]}_${R.start}_${R.end}.xlsx`);
 };
 </script>
 </body>

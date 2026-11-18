@@ -2,47 +2,91 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>บันทึกการออกนอกสถานที่ | เทศบาลตำบลคลองตำหรุ</title>
+<title>Smart Leave-Out | เทศบาลตำบลคลองตำหรุ</title>
+<meta name="theme-color" content="#070b1a">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<header class="hero">
-  <div class="nav">
-    <div class="brand"><div class="logo">🚶</div><div>บันทึกการออกนอกสถานที่<small>กรณีออกไปทำธุระส่วนตัวในเวลาราชการ · เทศบาลตำบลคลองตำหรุ</small></div></div>
-    <a class="btn-ghost" href="dashboard.html">📊 แดชบอร์ด</a>
+<header class="top"><div class="in">
+  <div class="brand"><div class="logo">🛰️</div><div><b>Smart Leave-Out</b><small>บันทึกการออกนอกสถานที่ · ธุระส่วนตัวในเวลาราชการ</small></div></div>
+  <div class="navl">
+    <div class="clock"><div class="t" id="clk">--:--:--</div><div class="d" id="clkD"></div></div>
+    <a class="chipbtn" href="dashboard.html">📊 Dashboard</a>
   </div>
-</header>
+</div></header>
 
 <main class="wrap">
-  <section class="card" id="formCard">
-    <h2>แบบบันทึกขออนุญาตออกนอกสถานที่</h2>
-    <p class="sub">กรอกข้อมูลให้ครบถ้วนก่อนออกนอกสถานที่ ระบบจะบันทึกเวลาอัตโนมัติ</p>
-    <form id="f" class="grid g2" autocomplete="on">
-      <div><label>ชื่อ - สกุล <span class="req">*</span></label><input name="name" required placeholder="เช่น นายสมชาย ใจดี"></div>
-      <div><label>ตำแหน่ง <span class="req">*</span></label><input name="position" required placeholder="เช่น นักวิชาการคลัง"></div>
-      <div class="full"><label>สำนัก/กอง <span class="req">*</span></label><select name="division" id="division" required><option value="">— เลือกสำนัก/กอง —</option></select></div>
-      <div class="full"><label>ขออนุญาตไป (ธุระ) <span class="req">*</span></label><textarea name="purpose" required placeholder="เช่น ติดต่อธนาคาร / พาบุตรไปโรงพยาบาล"></textarea></div>
-      <div class="full"><label>สถานที่ <span class="req">*</span></label><input name="place" required placeholder="เช่น ธนาคารกรุงไทย สาขาพานทอง"></div>
-      <div><label>วันที่ <span class="req">*</span></label><input type="date" name="date" id="date" required></div>
-      <div class="grid g2" style="gap:12px">
-        <div><label>เวลาไป <span class="req">*</span></label><div class="t24" data-for="timeOut"></div><input type="hidden" name="timeOut" id="timeOut"></div>
-        <div><label>เวลากลับ <span class="req">*</span></label><div class="t24" data-for="timeIn"></div><input type="hidden" name="timeIn" id="timeIn"></div>
+  <form id="f" class="grid g3" autocomplete="off">
+    <!-- ซ้าย: ข้อมูล -->
+    <section class="glass pad s2 grid" style="gap:18px;align-content:start">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="margin:0;font-size:22px">ขออนุญาตออกนอกสถานที่</h2>
+        <span class="badge live">ระบบพร้อมใช้งาน</span>
       </div>
-      <div class="full dur" id="dur">⏱ ระยะเวลา: —</div>
-      <div class="full actions">
-        <button type="reset" class="btn btn-light">ล้างข้อมูล</button>
-        <button type="submit" class="btn btn-pri" id="btnSave">💾 บันทึกข้อมูล</button>
-      </div>
-    </form>
-  </section>
 
-  <section class="card success hidden" id="okCard">
-    <div class="ic">✓</div>
-    <h2>บันทึกเรียบร้อย</h2>
-    <p class="sub" id="okText"></p>
-    <button class="btn btn-pri" id="btnNew">+ บันทึกรายการใหม่</button>
+      <!-- โปรไฟล์ที่จำไว้ -->
+      <div class="profile hidden" id="profile">
+        <div class="avatar" id="pAv">ส</div>
+        <div style="flex:1;min-width:0"><b id="pName"></b><div class="muted" style="font-size:13.5px" id="pSub"></div></div>
+        <button type="button" class="chipbtn" id="pEdit">✏️ แก้ไข</button>
+      </div>
+      <div class="grid g2" id="who">
+        <div><label>ชื่อ - สกุล <span class="req">*</span></label><input name="name" required placeholder="นาย/นาง/นางสาว ชื่อ สกุล"></div>
+        <div><label>ตำแหน่ง <span class="req">*</span></label><input name="position" required placeholder="เช่น นักวิชาการคลัง"></div>
+        <div class="full"><label>สำนัก/กอง <span class="req">*</span></label><select name="division" id="division" required><option value="">— เลือกสำนัก/กอง —</option></select></div>
+      </div>
+
+      <div>
+        <label>ขออนุญาตไป (ธุระ) <span class="req">*</span></label>
+        <textarea name="purpose" id="purpose" required placeholder="ระบุธุระ หรือแตะตัวเลือกด่วนด้านล่าง"></textarea>
+        <div class="chips" id="pChips"></div>
+      </div>
+      <div>
+        <label>สถานที่ <span class="req">*</span></label>
+        <input name="place" id="place" required placeholder="เช่น ธนาคารกรุงไทย สาขาพานทอง" list="placeList">
+        <datalist id="placeList"></datalist>
+        <div class="chips" id="plChips"></div>
+      </div>
+
+      <div class="grid g3">
+        <div><label>วันที่ <span class="req">*</span></label><input type="date" name="date" id="date" required></div>
+        <div><label>เวลาไป (24 ชม.) <span class="req">*</span></label><div class="t24" data-for="timeOut"></div><input type="hidden" name="timeOut" id="timeOut"></div>
+        <div><label>เวลากลับ (24 ชม.) <span class="req">*</span></label><div class="t24" data-for="timeIn"></div><input type="hidden" name="timeIn" id="timeIn"></div>
+      </div>
+      <div>
+        <label>⚡ ตั้งระยะเวลาด่วน</label>
+        <div class="chips" id="dChips"></div>
+      </div>
+    </section>
+
+    <!-- ขวา: ผู้ช่วยอัจฉริยะ -->
+    <aside class="glass pad grid" style="gap:16px;align-content:start">
+      <h3 class="ttl" style="margin:0"><span class="ic">🤖</span><span class="ai-h">Smart Assistant</span></h3>
+      <div>
+        <div class="muted" style="font-size:13px;font-family:Prompt">ระยะเวลาออกนอกสถานที่</div>
+        <div class="dur" id="dur">—</div>
+      </div>
+      <div>
+        <div class="muted" style="font-size:13px;font-family:Prompt;margin-bottom:6px">ไทม์ไลน์วันทำงาน (08:00–17:00)</div>
+        <div class="tl" id="tl"><div class="lunch" id="tlL"></div><div class="seg" id="tlS"></div></div>
+      </div>
+      <div class="smart" id="tips"></div>
+      <button type="submit" class="btn btn-pri" id="btnSave" style="width:100%;padding:16px">🚀 บันทึกและแจ้งออกนอกสถานที่</button>
+      <button type="reset" class="btn btn-ghost" style="width:100%">↺ เริ่มใหม่</button>
+    </aside>
+  </form>
+
+  <section class="glass success hidden" id="okCard">
+    <div class="ring">✓</div>
+    <h2 style="margin:0">บันทึกสำเร็จ</h2>
+    <p class="muted" style="margin:6px 0 0">ระบบบันทึกเวลาเรียบร้อย เดินทางปลอดภัยครับ</p>
+    <div class="ticket" id="ticket"></div>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-pri" id="btnNew">＋ บันทึกรายการใหม่</button>
+      <a class="btn btn-ghost" href="dashboard.html">📊 ดูแดชบอร์ด</a>
+    </div>
   </section>
-  <footer>© เทศบาลตำบลคลองตำหรุ</footer>
+  <footer>© เทศบาลตำบลคลองตำหรุ · Smart Leave-Out System</footer>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -50,64 +94,115 @@
 import { db, COLLECTION, DIVISIONS } from "./js/firebase-config.js";
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const $ = s => document.querySelector(s);
-const f = $("#f");
+const $ = s => document.querySelector(s), f = $("#f");
+const pad = n => String(n).padStart(2, "0");
+const toMin = s => { const [h, m] = s.split(":"); return +h * 60 + +m; };
+const fromMin = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const WORK = [toMin("08:30"), toMin("16:30")], LUNCH = [toMin("12:00"), toMin("13:00")], TL = [toMin("08:00"), toMin("17:00")];
+const LS = k => JSON.parse(localStorage.getItem(k) || "null");
+const toast = (m, e) => { const t = $("#toast"); t.textContent = m; t.className = "toast show" + (e ? " err" : ""); setTimeout(() => t.className = "toast", 3200); };
+
+// นาฬิกา
+setInterval(() => { const d = new Date(); $("#clk").textContent = d.toLocaleTimeString("th-TH", { hour12: false }); $("#clkD").textContent = d.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }, 1000);
+
 DIVISIONS.forEach(d => $("#division").add(new Option(d, d)));
 
 // ตัวเลือกเวลา 24 ชม.
+const pickers = {};
 document.querySelectorAll(".t24").forEach(w => {
-  const id = w.dataset.for, o = (n, m) => Array.from({length:n}, (_, i) => `<option>${String(i*(m||1)).padStart(2,"0")}</option>`).join("");
-  w.innerHTML = `<select aria-label="ชั่วโมง">${o(24)}</select><b>:</b><select aria-label="นาที">${o(60)}</select><span>น.</span>`;
+  const id = w.dataset.for, o = n => Array.from({ length: n }, (_, i) => `<option>${pad(i)}</option>`).join("");
+  w.innerHTML = `<select aria-label="ชั่วโมง">${o(24)}</select><b>:</b><select aria-label="นาที">${o(60)}</select>`;
   const [h, m] = w.querySelectorAll("select");
-  const sync = () => { document.getElementById(id).value = h.value + ":" + m.value; calc(); };
+  const sync = () => { $("#" + id).value = h.value + ":" + m.value; analyze(); };
   h.onchange = m.onchange = sync;
-  w.set = v => { [h.value, m.value] = v.split(":"); sync(); };
+  pickers[id] = v => { [h.value, m.value] = v.split(":"); sync(); };
 });
-const setT = (id, v) => document.querySelector(`.t24[data-for="${id}"]`).set(v);
-// ค่าเริ่มต้น + จำข้อมูลผู้ใช้เดิม
-const pad = n => String(n).padStart(2, "0");
-const setDefaults = () => {
-  const now = new Date();
-  $("#date").value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  setT("timeOut", `${pad(now.getHours())}:${pad(now.getMinutes())}`);
-  setT("timeIn", `${pad(Math.min(23, now.getHours()+1))}:${pad(now.getMinutes())}`);
-  const me = JSON.parse(localStorage.getItem("lol_me") || "{}");
-  ["name","position","division"].forEach(k => me[k] && (f[k].value = me[k]));
-  calc();
-};
-const mins = () => {
-  const [a,b] = [$("#timeOut").value, $("#timeIn").value];
-  if (!a || !b) return null;
-  const t = s => s.split(":").reduce((h,m) => +h*60 + +m);
-  return t(b) - t(a);
-};
-function calc(){
-  const m = mins();
-  $("#dur").textContent = m == null ? "⏱ ระยะเวลา: —" : m <= 0 ? "⚠️ เวลากลับต้องมากกว่าเวลาไป" : `⏱ ระยะเวลา: ${Math.floor(m/60)} ชม. ${m%60} นาที`;
-  $("#dur").style.background = m != null && m <= 0 ? "#fef2f2" : "";
-  $("#dur").style.color = m != null && m <= 0 ? "#b91c1c" : "";
-}
-f.addEventListener("reset", () => setTimeout(setDefaults));
 
-function toast(msg, err){ const t=$("#toast"); t.textContent=msg; t.className="toast show"+(err?" err":""); setTimeout(()=>t.className="toast",2800); }
+// ตัวเลือกด่วน
+const PURPOSES = ["🏦 ติดต่อธนาคาร", "🏥 พบแพทย์/โรงพยาบาล", "👶 รับ-ส่งบุตร", "📮 ไปรษณีย์", "🏛️ ติดต่อหน่วยงานราชการ", "🚗 ธุระเกี่ยวกับรถ", "🛒 ธุระส่วนตัวอื่น ๆ"];
+$("#pChips").innerHTML = PURPOSES.map(p => `<button type="button" class="chip">${p}</button>`).join("");
+$("#pChips").onclick = e => { const c = e.target.closest(".chip"); if (!c) return; $("#purpose").value = c.textContent.replace(/^\S+\s/, ""); analyze(); };
+const DURS = [[30, "30 นาที"], [60, "1 ชม."], [90, "1.5 ชม."], [120, "2 ชม."], [180, "3 ชม."]];
+$("#dChips").innerHTML = DURS.map(([m, t]) => `<button type="button" class="chip" data-m="${m}">${t}</button>`).join("");
+$("#dChips").onclick = e => { const c = e.target.closest(".chip"); if (!c) return; pickers.timeIn(fromMin(Math.min(toMin($("#timeOut").value) + +c.dataset.m, 23 * 60 + 59))); };
+
+// สถานที่ที่เคยไป (เก็บในเครื่อง)
+function renderPlaces() {
+  const pl = LS("lol_places") || [];
+  $("#placeList").innerHTML = pl.map(p => `<option value="${p.replace(/"/g, "&quot;")}">`).join("");
+  $("#plChips").innerHTML = pl.slice(0, 5).map(p => `<button type="button" class="chip">📍 ${p.replace(/</g, "&lt;")}</button>`).join("");
+}
+$("#plChips").onclick = e => { const c = e.target.closest(".chip"); if (c) { $("#place").value = c.textContent.slice(3); analyze(); } };
+
+// โปรไฟล์
+function renderProfile() {
+  const me = LS("lol_me");
+  if (me?.name) {
+    ["name", "position", "division"].forEach(k => f[k].value = me[k] || "");
+    $("#pAv").textContent = me.name.replace(/^(นาย|นางสาว|นาง|น\.ส\.)\s*/, "").charAt(0);
+    $("#pName").textContent = me.name; $("#pSub").textContent = `${me.position} · ${me.division}`;
+    $("#profile").classList.remove("hidden"); $("#who").classList.add("hidden");
+  }
+}
+$("#pEdit").onclick = () => { $("#profile").classList.add("hidden"); $("#who").classList.remove("hidden"); };
+
+function setDefaults() {
+  const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+  $("#date").value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  pickers.timeOut(fromMin(cur)); pickers.timeIn(fromMin(Math.min(cur + 60, 23 * 60 + 59)));
+  renderProfile(); renderPlaces(); analyze();
+}
+
+// วิเคราะห์อัจฉริยะ
+function analyze() {
+  if (!$("#timeOut").value || !$("#timeIn").value) return;
+  const a = toMin($("#timeOut").value), b = toMin($("#timeIn").value), d = b - a, tips = [];
+  $("#dur").textContent = d > 0 ? (d >= 60 ? `${Math.floor(d / 60)} ชม. ${d % 60 ? d % 60 + " นาที" : ""}` : `${d} นาที`) : "—";
+  const x = m => ((Math.max(TL[0], Math.min(TL[1], m)) - TL[0]) / (TL[1] - TL[0]) * 100) + "%";
+  $("#tlL").style.left = x(LUNCH[0]); $("#tlL").style.width = `calc(${x(LUNCH[1])} - ${x(LUNCH[0])})`;
+  $("#tlS").style.left = x(a); $("#tlS").style.width = d > 0 ? `calc(${x(b)} - ${x(a)})` : "0";
+  if (!$("#tl .tk")) for (let h = 8; h <= 17; h++) $("#tl").insertAdjacentHTML("beforeend", `<span class="tk" style="left:${(h - 8) / 9 * 100}%">${pad(h)}</span>`);
+  document.querySelectorAll("#dChips .chip").forEach(c => c.classList.toggle("on", +c.dataset.m === d));
+
+  if (d <= 0) tips.push(["err", "⛔", "เวลากลับต้องมากกว่าเวลาไป"]);
+  else {
+    if (a < WORK[0] || b > WORK[1]) tips.push(["warn", "🕘", "มีช่วงเวลานอกเวลาราชการ (08:30–16:30) ตรวจสอบอีกครั้ง"]);
+    if (a < LUNCH[1] && b > LUNCH[0]) tips.push(["warn", "🍱", "คาบเกี่ยวช่วงพักกลางวัน 12:00–13:00"]);
+    if (d > 180) tips.push(["warn", "⏳", "ออกนอกสถานที่เกิน 3 ชั่วโมง อาจพิจารณายื่นใบลาแทน"]);
+  }
+  const dt = $("#date").value, today = new Date(); today.setHours(0, 0, 0, 0);
+  const dd = new Date(dt + "T00:00");
+  if (dt && dd < today) tips.push(["warn", "📅", "เป็นการบันทึกย้อนหลัง"]);
+  if (dt && [0, 6].includes(dd.getDay())) tips.push(["warn", "🗓️", "วันที่เลือกเป็นวันหยุดเสาร์-อาทิตย์"]);
+  if (!tips.length) tips.push(["ok", "✅", "ข้อมูลเวลาอยู่ในเกณฑ์ปกติ พร้อมบันทึก"]);
+  $("#tips").innerHTML = tips.map(([c, i, t]) => `<div class="tip ${c}"><span>${i}</span><span>${t}</span></div>`).join("");
+  $("#btnSave").disabled = d <= 0;
+}
+$("#date").onchange = analyze;
+f.addEventListener("reset", () => setTimeout(setDefaults));
 
 f.addEventListener("submit", async e => {
   e.preventDefault();
-  const m = mins();
-  if (!m || m <= 0) return toast("เวลากลับต้องมากกว่าเวลาไป", true);
   const d = Object.fromEntries(new FormData(f));
-  Object.keys(d).forEach(k => d[k] = d[k].trim());
-  $("#btnSave").disabled = true; $("#btnSave").textContent = "กำลังบันทึก...";
+  Object.keys(d).forEach(k => d[k] = String(d[k]).trim());
+  const m = toMin(d.timeIn) - toMin(d.timeOut);
+  if (!d.name || !d.position || !d.division) { $("#pEdit").click(); return toast("กรุณากรอกชื่อ ตำแหน่ง และสำนัก/กอง", true); }
+  if (m <= 0) return toast("เวลากลับต้องมากกว่าเวลาไป", true);
+  const btn = $("#btnSave"); btn.disabled = true; btn.textContent = "⏳ กำลังบันทึก...";
   try {
     await addDoc(collection(db, COLLECTION), { ...d, durationMin: m, createdAt: serverTimestamp() });
-    localStorage.setItem("lol_me", JSON.stringify({ name:d.name, position:d.position, division:d.division }));
-    const th = new Date(d.date).toLocaleDateString("th-TH",{dateStyle:"long"});
-    $("#okText").textContent = `${d.name} (${d.division}) · ${th} เวลา ${d.timeOut}–${d.timeIn} น. · ${d.place}`;
-    $("#formCard").classList.add("hidden"); $("#okCard").classList.remove("hidden");
-  } catch (err) { console.error(err); toast("บันทึกไม่สำเร็จ: " + err.message, true); }
-  $("#btnSave").disabled = false; $("#btnSave").textContent = "💾 บันทึกข้อมูล";
+    localStorage.setItem("lol_me", JSON.stringify({ name: d.name, position: d.position, division: d.division }));
+    const pl = [d.place, ...(LS("lol_places") || []).filter(p => p !== d.place)].slice(0, 12);
+    localStorage.setItem("lol_places", JSON.stringify(pl));
+    const th = new Date(d.date + "T00:00").toLocaleDateString("th-TH", { dateStyle: "long" });
+    const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    $("#ticket").innerHTML = [["ชื่อ", d.name], ["สำนัก/กอง", d.division], ["ธุระ", d.purpose], ["สถานที่", d.place], ["วันที่", th], ["เวลา", `${d.timeOut} – ${d.timeIn} น. (${$("#dur").textContent})`]]
+      .map(([k, v]) => `<div><span>${k}</span><b style="text-align:right">${esc(v)}</b></div>`).join("");
+    f.classList.add("hidden"); $("#okCard").classList.remove("hidden"); scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) { console.error(err); toast("บันทึกไม่สำเร็จ: " + (err.code || err.message), true); }
+  btn.disabled = false; btn.textContent = "🚀 บันทึกและแจ้งออกนอกสถานที่";
 });
-$("#btnNew").onclick = () => { f.reset(); $("#okCard").classList.add("hidden"); $("#formCard").classList.remove("hidden"); };
+$("#btnNew").onclick = () => { f.reset(); $("#okCard").classList.add("hidden"); f.classList.remove("hidden"); };
 setDefaults();
 </script>
 </body>
