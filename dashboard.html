@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Smart Dashboard · ออกนอกสถานที่ | เทศบาลตำบลคลองตำหรุ</title>
-<meta name="theme-color" content="#070b1a">
+<meta name="theme-color" content="#f4f7fc">
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
@@ -119,7 +119,7 @@ const LIMIT = { week: 2, month: 4, year: 30 }; // เกณฑ์แจ้งเ
 setInterval(() => { const d = new Date(); $("#clk").textContent = d.toLocaleTimeString("th-TH", { hour12: false }); $("#clkD").textContent = d.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }, 1000);
 DIVISIONS.forEach(d => $("#divFilter").add(new Option(d, d)));
 $("#refDate").value = ymd(new Date());
-Chart.defaults.color = "#8d97c2"; Chart.defaults.font.family = "Sarabun"; Chart.defaults.borderColor = "rgba(255,255,255,.06)";
+Chart.defaults.color = "#64748b"; Chart.defaults.font.family = "Sarabun"; Chart.defaults.borderColor = "#eef2f7";
 
 let period = "month", cur = [], prev = [], today = [], charts = {}, unsub = null, unsubToday = null, CARS = [];
 onSnapshot(collection(db, CAR.REQ), s => { CARS = s.docs.map(d => ({ id: d.id, ...d.data() })); if (auth.currentUser) render(); });
@@ -190,11 +190,11 @@ function renderNow() {
   const trips = CARS.filter(r => r.status === "อนุมัติ" && r.startDate <= td && r.endDate >= td && (!dv || r.department === dv));
   const out = list.filter(r => toMin(r.timeOut) <= m && m < toMin(r.timeIn)).length + trips.filter(r => (r.startDate + " " + r.startTime) <= cur2 && cur2 < (r.endDate + " " + r.endTime)).length;
   $("#kNow").textContent = out;
-  const tripHTML = trips.map(r => { const a = r.startDate < td ? 0 : toMin(r.startTime), b = r.endDate > td ? 1440 : toMin(r.endTime), st = m < a ? ["รอเดินทาง", "#fbbf24"] : m < b ? ["ไปราชการ", "#22d3ee"] : ["กลับแล้ว", "#8d97c2"];
+  const tripHTML = trips.map(r => { const a = r.startDate < td ? 0 : toMin(r.startTime), b = r.endDate > td ? 1440 : toMin(r.endTime), st = m < a ? ["รอเดินทาง", "#d97706"] : m < b ? ["ไปราชการ", "#0284c7"] : ["กลับแล้ว", "#94a3b8"];
     return `<div class="now"><div class="avatar" style="background:${col(r.department)}">🚘</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</b><span class="dp" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></div>
       <div class="muted" style="font-size:12.5px">${r.startTime}–${r.endTime} · ${esc(r.carPlate)} · ${esc(r.destination)}</div><div class="pg"><i style="width:${Math.max(0, Math.min(100, (m - a) / (b - a) * 100))}%"></i></div></div></div>`; }).join("");
   $("#nowList").innerHTML = tripHTML + list.map(r => {
-    const a = toMin(r.timeOut), b = toMin(r.timeIn), st = m < a ? ["รอออก", "#fbbf24"] : m < b ? ["กำลังออก", "#34d399"] : ["กลับแล้ว", "#8d97c2"];
+    const a = toMin(r.timeOut), b = toMin(r.timeIn), st = m < a ? ["รอออก", "#d97706"] : m < b ? ["กำลังออก", "#059669"] : ["กลับแล้ว", "#94a3b8"];
     const pg = Math.max(0, Math.min(100, (m - a) / (b - a) * 100));
     return `<div class="now"><div class="avatar" style="background:${col(r.division)}">${esc(r.name.replace(/^(นาย|นางสาว|นาง)\s*/, "").charAt(0))}</div>
       <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</b><span class="dp" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></div>
@@ -234,7 +234,7 @@ function render() {
   v.forEach(r => { const wd = new Date(r.date + "T00:00").getDay(), h = +r.timeOut.slice(0, 2); if (wd >= 1 && wd <= 5 && h >= 8 && h <= 17) H[wd - 1][h - 8]++; });
   const hm = Math.max(1, ...H.flat());
   $("#heat").innerHTML = `<span></span>` + Array.from({ length: 10 }, (_, i) => `<span class="h">${pad(i + 8)}</span>`).join("") +
-    H.map((row, i) => `<span class="h">${DAYS[i + 1]}</span>` + row.map(c => `<span class="c" title="${c} ครั้ง" style="background:rgba(124,92,255,${c ? .15 + c / hm * .85 : .04})">${c || ""}</span>`).join("")).join("");
+    H.map((row, i) => `<span class="h">${DAYS[i + 1]}</span>` + row.map(c => `<span class="c" title="${c} ครั้ง" style="background:rgba(99,102,241,${c ? .15 + c / hm * .85 : .06})">${c || ""}</span>`).join("")).join("");
 
   // กราฟแนวโน้ม
   let labels = [], keys = [];
@@ -243,7 +243,7 @@ function render() {
   const kf = r => period === "year" ? r.date.slice(5, 7) : r.date;
   const sets = DIVISIONS.map(d => ({ label: d, backgroundColor: col(d), borderRadius: 6, maxBarThickness: 34, data: keys.map(k => v.filter(r => r.division === d && kf(r) === k).length) })).filter(s => s.data.some(Boolean));
   draw("cTrend", "bar", { labels, datasets: sets }, { scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } } });
-  draw("cDiv", "doughnut", { labels: DIVISIONS, datasets: [{ data: byDiv.map(x => x.n), backgroundColor: DIVISIONS.map(col), borderColor: "#0b1126", borderWidth: 3, hoverOffset: 8 }] },
+  draw("cDiv", "doughnut", { labels: DIVISIONS, datasets: [{ data: byDiv.map(x => x.n), backgroundColor: DIVISIONS.map(col), borderColor: "#fff", borderWidth: 3, hoverOffset: 8 }] },
     { cutout: "68%", plugins: { legend: { position: "bottom", labels: { boxWidth: 10, padding: 10, font: { size: 11.5 } } } } });
 
   const cv = carIn(R, $("#divFilter").value), ok = cv.filter(r => r.status === "อนุมัติ");
@@ -252,8 +252,8 @@ function render() {
   $("#carBars").innerHTML = Object.entries(pc).sort((a, b) => b[1] - a[1]).map(([p, n]) => `<div class="row"><span>${esc(p)}</span><div class="bar"><i style="width:${n / pm * 100}%;background:var(--grad)"></i></div><span class="n">${n}</span></div>`).join("") || `<div class="muted" style="text-align:center;padding:14px">ยังไม่มีการใช้รถในช่วงนี้</div>`;
   const short = d => d.replace("กองสาธารณสุขและสิ่งแวดล้อม", "กองสาธารณสุขฯ").replace("กองยุทธศาสตร์และงบประมาณ", "กองยุทธศาสตร์ฯ");
   draw("cMix", "bar", { labels: DIVISIONS.map(short), datasets: [
-    { label: "ธุระส่วนตัว (ครั้ง)", data: byDiv.map(x => x.n), backgroundColor: "#7c5cff", borderRadius: 6 },
-    { label: "ไปราชการด้วยรถส่วนกลาง (เที่ยว)", data: DIVISIONS.map(d => ok.filter(r => r.department === d).length), backgroundColor: "#22d3ee", borderRadius: 6 }] },
+    { label: "ธุระส่วนตัว (ครั้ง)", data: byDiv.map(x => x.n), backgroundColor: "#6366f1", borderRadius: 6 },
+    { label: "ไปราชการด้วยรถส่วนกลาง (เที่ยว)", data: DIVISIONS.map(d => ok.filter(r => r.department === d).length), backgroundColor: "#0ea5e9", borderRadius: 6 }] },
     { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { position: "bottom", labels: { boxWidth: 10 } } } });
   insights(v, pv, byDiv, top, H, ok);
 }
@@ -269,7 +269,7 @@ function insights(v, pv, byDiv, top, H, ok = []) {
   if (!v.length) { const cl = carLine(); if (cl.length) { $("#ai").innerHTML = cl.map(([i, t]) => `<div class="it"><i>${i}</i><span>${t}</span></div>`).join(""); return; } $("#ai").innerHTML = `<div class="it"><i>💤</i><span>ยังไม่มีข้อมูลใน${P}นี้ ระบบจะวิเคราะห์ให้อัตโนมัติเมื่อมีการบันทึก</span></div>`; return; }
   const tm = sum(v);
   if (pv.length) { const p = Math.round((v.length - pv.length) / pv.length * 100);
-    out.push([p > 20 ? "📈" : p < -20 ? "📉" : "➖", `${P}นี้มีการออกนอกสถานที่ <b>${v.length} ครั้ง</b> ${p === 0 ? "เท่ากับ" : p > 0 ? `<b style="color:#fbbf24">เพิ่มขึ้น ${p}%</b> จาก` : `<b style="color:#34d399">ลดลง ${-p}%</b> จาก`}${P}ก่อนหน้า (${pv.length} ครั้ง)`]); }
+    out.push([p > 20 ? "📈" : p < -20 ? "📉" : "➖", `${P}นี้มีการออกนอกสถานที่ <b>${v.length} ครั้ง</b> ${p === 0 ? "เท่ากับ" : p > 0 ? `<b style="color:#d97706">เพิ่มขึ้น ${p}%</b> จาก` : `<b style="color:#059669">ลดลง ${-p}%</b> จาก`}${P}ก่อนหน้า (${pv.length} ครั้ง)`]); }
   const td = [...byDiv].sort((a, b) => b.n - a.n)[0];
   if (td.n) out.push(["🏢", `<b>${td.d}</b> ออกนอกสถานที่มากที่สุด ${td.n} ครั้ง คิดเป็น <b>${Math.round(td.n / v.length * 100)}%</b> ของทั้งหมด รวม ${hrs(td.m)} ชั่วโมง`]);
   let best = [0, 0, 0]; H.forEach((r, i) => r.forEach((c, j) => c > best[0] && (best = [c, i, j])));

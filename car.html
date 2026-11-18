@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Smart Car · ขออนุมัติใช้รถยนต์ส่วนกลาง | เทศบาลตำบลคลองตำหรุ</title>
-<meta name="theme-color" content="#070b1a">
+<meta name="theme-color" content="#f4f7fc">
 <link rel="stylesheet" href="css/style.css">
 <style>
 #printArea{display:none}
@@ -92,7 +92,7 @@ input[type=range]{padding:0;accent-color:#7c5cff;border:0;box-shadow:none;backgr
     <div class="glass pad">
       <div class="toolbar" style="margin-bottom:14px">
         <div><label>ค้นหาอัจฉริยะ</label><input id="q" placeholder="🔎 เลขที่ / ชื่อ / สถานที่ / ทะเบียนรถ" oninput="renderList()"></div>
-        <div style="flex:0 0 180px"><label>เดือน</label><input id="qMonth" type="month" onchange="renderList()" style="color-scheme:dark"></div>
+        <div style="flex:0 0 180px"><label>เดือน</label><input id="qMonth" type="month" onchange="renderList()" ></div>
         <div style="flex:0 0 220px"><label>สังกัด</label><select id="qDept" onchange="renderList()"><option value="">ทุกสำนัก/กอง</option></select></div>
       </div>
       <div class="chips" id="chips" style="margin-bottom:12px"></div>
@@ -337,7 +337,7 @@ function renderList() {
     <td>📍 ${esc(r.destination)}<div class="muted" style="font-size:12.5px">${esc(r.purpose)}</div></td>
     <td style="white-space:nowrap">${thD(r.startDate, 1)} ${r.startTime}<div class="muted" style="font-size:12.5px">ถึง ${thD(r.endDate, 1)} ${r.endTime}</div></td>
     <td>${esc(r.carPlate) || '<span class="muted">-</span>'}<div class="muted" style="font-size:12px">${esc(r.driver)}</div></td>
-    <td><span class="st st-${r.status}">${r.status}</span><div style="font-size:11px;letter-spacing:2px;color:#6ee7b7;margin-top:4px" title="ผู้ขอ/ผอ.กอง/ผู้สั่งใช้รถ">${["sigReq", "sigHead", "sigAppr"].map(c => r[c] ? "●" : "○").join("")}</div></td>
+    <td><span class="st st-${r.status}">${r.status}</span><div style="font-size:11px;letter-spacing:2px;color:#059669;margin-top:4px" title="ผู้ขอ/ผอ.กอง/ผู้สั่งใช้รถ">${["sigReq", "sigHead", "sigAppr"].map(c => r[c] ? "●" : "○").join("")}</div></td>
     <td style="white-space:nowrap"><button class="btn btn-ghost btn-s" onclick="detail('${r.id}')" title="รายละเอียด">👁</button> <button class="btn btn-ghost btn-s" onclick="printReq('${r.id}')" title="พิมพ์">🖨️</button>
       ${USER && r.status === "รออนุมัติ" ? `<button class="btn btn-ok btn-s" onclick="approveM('${r.id}')" title="พิจารณา">⚖️</button>` : ""}
       ${USER ? `<button class="btn btn-bad btn-s" onclick="delReq('${r.id}')" title="ลบ">🗑</button>` : ""}</td></tr>`).join("") ||
