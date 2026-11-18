@@ -68,3 +68,4 @@ tr:hover td{background:#fafbff}
 .divbars .bar i{display:block;height:100%;border-radius:99px}
 .divbars .n{width:40px;text-align:right;font-weight:600}
 footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 30px}
+.t24{display:flex;align-items:center;gap:6px}.t24 select{width:auto;flex:1;text-align:center;font-family:Prompt;font-size:17px}.t24 span{color:var(--muted)}
