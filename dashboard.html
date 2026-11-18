@@ -25,7 +25,7 @@
     <p class="sub">สำหรับเจ้าหน้าที่ที่ได้รับสิทธิ์ดูข้อมูล</p>
     <form id="loginForm" class="grid">
       <div><label>อีเมล</label><input type="email" id="email" required></div>
-      <div><label>รหัสผ่าน</label><input type="password" id="pass" required></div>
+      <div><label>รหัสผ่าน</label><input type="password" id="pass" required autocomplete="new-password"></div>
       <button class="btn btn-pri" style="justify-content:center">เข้าสู่ระบบ</button>
     </form>
   </div>
@@ -104,7 +104,7 @@ onAuthStateChanged(auth, u => {
 $("#loginForm").onsubmit = async e => {
   e.preventDefault();
   try { await signInWithEmailAndPassword(auth, $("#email").value, $("#pass").value); }
-  catch { toast("อีเมลหรือรหัสผ่านไม่ถูกต้อง", true); }
+  catch (err) { toast((/invalid|wrong|not-found/.test(err.code) ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : "เข้าสู่ระบบไม่สำเร็จ") + " (" + err.code + ")", true); }
 };
 $("#btnLogout").onclick = e => { e.preventDefault(); signOut(auth); };
 
