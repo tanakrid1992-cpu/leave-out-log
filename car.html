@@ -157,7 +157,7 @@ input[type=range]{padding:0;accent-color:#7c5cff;border:0;box-shadow:none;backgr
 <div id="printArea"></div>
 
 <script type="module">
-import { db, auth, DIVISIONS, CAR, ROLES, CAR_DEFAULT, SEED_CAR } from "./js/firebase-config.js";
+import { db, auth, DIVISIONS, CAR, ROLES, CAR_DEFAULT, SEED_CAR, secureDelete } from "./js/firebase-config.js";
 import { collection, doc, onSnapshot, runTransaction, writeBatch, updateDoc, deleteDoc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -340,7 +340,7 @@ function renderList() {
     <td><span class="st st-${r.status}">${r.status}</span><div style="font-size:11px;letter-spacing:2px;color:#059669;margin-top:4px" title="ผู้ขอ/ผอ.กอง/ผู้สั่งใช้รถ">${["sigReq", "sigHead", "sigAppr"].map(c => r[c] ? "●" : "○").join("")}</div></td>
     <td style="white-space:nowrap"><button class="btn btn-ghost btn-s" onclick="detail('${r.id}')" title="รายละเอียด">👁</button> <button class="btn btn-ghost btn-s" onclick="printReq('${r.id}')" title="พิมพ์">🖨️</button>
       ${USER && r.status === "รออนุมัติ" ? `<button class="btn btn-ok btn-s" onclick="approveM('${r.id}')" title="พิจารณา">⚖️</button>` : ""}
-      ${USER ? `<button class="btn btn-bad btn-s" onclick="delReq('${r.id}')" title="ลบ">🗑</button>` : ""}</td></tr>`).join("") ||
+      ${USER ? `<button class="btn btn-ghost btn-s" onclick="editReq('${r.id}')" title="แก้ไข">✏️</button> <button class="btn btn-bad btn-s" onclick="delReq('${r.id}')" title="ลบ">🗑</button>` : ""}</td></tr>`).join("") ||
     `<tr><td colspan="7" class="muted" style="text-align:center;padding:34px">ไม่พบรายการ</td></tr>`;
 }
 
@@ -362,7 +362,7 @@ W.detail = id => { const r = R(id);
   <b style="font-size:14px">✍️ ลงนามอิเล็กทรอนิกส์</b>${stepsHTML(r)}
   ${USER && r.status === "อนุมัติ" ? `<div class="grid g2"><div><label>เลขไมล์ก่อนออก</label><input id="m1" type="number" value="${esc(r.mileStart)}"></div><div><label>เลขไมล์กลับ</label><input id="m2" type="number" value="${esc(r.mileEnd)}"></div></div>` : ""}
   <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">${USER && r.status === "อนุมัติ" ? `<button class="btn btn-ghost" onclick="saveMile('${id}')">💾 บันทึกไมล์</button>` : ""}
-  ${USER && r.status === "รออนุมัติ" ? `<button class="btn btn-ok" onclick="approveM('${id}')">⚖️ พิจารณา</button>` : ""}<button class="btn btn-pri" onclick="printReq('${id}')">🖨️ พิมพ์ A4</button></div>`); };
+  ${USER && r.status === "รออนุมัติ" ? `<button class="btn btn-ok" onclick="approveM('${id}')">⚖️ พิจารณา</button>` : ""}${USER ? `<button class="btn btn-ghost" onclick="editReq('${id}')">✏️ แก้ไข</button><button class="btn btn-bad" onclick="delReq('${id}')">🗑 ลบ</button>` : ""}<button class="btn btn-pri" onclick="printReq('${id}')">🖨️ พิมพ์ A4</button></div>`); };
 W.saveMile = async id => { try { await updateDoc(doc(db, CAR.REQ, id), { mileStart: $("#m1").value, mileEnd: $("#m2").value }); toast("บันทึกเลขไมล์แล้ว"); closeM(); } catch (e) { toast(errMsg(e), 1); } };
 function clash(r, plate) { const x = D.reqs.find(x => x.id !== r.id && x.status === "อนุมัติ" && x.carPlate === plate && overlap(x, r.startDate + " " + r.startTime, r.endDate + " " + r.endTime));
   if (x) throw new Error(`รถคันนี้ถูกจองแล้วในช่วงเวลาดังกล่าว (คำขอ ${x.id})`); }
@@ -380,7 +380,26 @@ W.doApprove = async (id, st) => { const r = R(id), car = $("#aCar").value;
   try { if (st === "อนุมัติ") { if (!car) throw new Error("กรุณาเลือกรถ"); clash(r, car); }
     await updateDoc(doc(db, CAR.REQ, id), { status: st, carPlate: st === "อนุมัติ" ? car : r.carPlate, driver: st === "อนุมัติ" ? $("#aDrv").value : "", approver: ($("input[name=aBy]:checked") || {}).value || "", approveNote: $("#aNote").value, approvedAt: nowStr() });
     toast(st === "อนุมัติ" ? "อนุมัติเรียบร้อย" : "บันทึกไม่อนุมัติแล้ว"); closeM(); } catch (e) { toast(errMsg(e), 1); } };
-W.delReq = async id => { if (!confirm("ยืนยันการลบคำขอ " + id + " ?")) return; try { await deleteDoc(doc(db, CAR.REQ, id)); toast("ลบแล้ว"); } catch (e) { toast(errMsg(e), 1); } };
+W.delReq = async id => { try { if (await secureDelete(CAR.REQ, id, R(id))) { toast("ลบคำขอ " + id + " แล้ว (เก็บสำเนาไว้)"); closeM(); } } catch (e) { toast(e.message, 1); } };
+W.editReq = id => { const r = R(id), tp = k => `<div class="t24" data-k="${k}"><select>${Array.from({ length: 24 }, (_, i) => `<option>${pad(i)}</option>`).join("")}</select><b>:</b><select>${Array.from({ length: 60 }, (_, i) => `<option>${pad(i)}</option>`).join("")}</select></div>`;
+  openM(`<h3 class="mh">✏️ แก้ไขคำขอ ${r.id}${X}</h3><form id="eF" class="grid g2" onsubmit="return false">
+  <div><label>ชื่อ-สกุล</label><input name="name" required value="${esc(r.name)}"></div><div><label>ตำแหน่ง</label><input name="position" required value="${esc(r.position)}"></div>
+  <div><label>สังกัด</label><select name="department">${DIVISIONS.map(d => `<option ${d === r.department ? "selected" : ""}>${d}</option>`).join("")}</select></div><div><label>โทร</label><input name="phone" value="${esc(r.phone)}"></div>
+  <div class="full"><label>สถานที่ไป</label><input name="destination" required value="${esc(r.destination)}"></div>
+  <div class="full"><label>วัตถุประสงค์</label><textarea name="purpose" required>${esc(r.purpose)}</textarea></div>
+  <div><label>วันที่ไป</label><input type="date" name="startDate" required value="${r.startDate}"></div><div><label>เวลาไป</label>${tp("startTime")}</div>
+  <div><label>ถึงวันที่</label><input type="date" name="endDate" required value="${r.endDate}"></div><div><label>เวลากลับ</label>${tp("endTime")}</div>
+  <div><label>ผู้โดยสาร (คน)</label><input type="number" min="1" name="passengers" value="${esc(r.passengers)}"></div>
+  <div><label>รถ</label><select name="carPlate"><option value="">— ไม่ระบุ —</option>${carOpts(r.carPlate)}</select></div>
+  <div><label>พนักงานขับรถ</label><input name="driver" value="${esc(r.driver)}"></div><div><label>ผู้สั่งใช้รถ</label><input name="approver" value="${esc(r.approver)}"></div>
+  <div class="full"><label>หมายเหตุ</label><input name="approveNote" value="${esc(r.approveNote)}"></div></form>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px"><button class="btn btn-bad" onclick="delReq('${id}')">🗑 ลบ</button><button class="btn btn-pri" onclick="saveEdit('${id}')">💾 บันทึกการแก้ไข</button></div>`);
+  [["startTime", r.startTime], ["endTime", r.endTime]].forEach(([k, v]) => { const [h, m] = $$(`.t24[data-k=${k}] select`); [h.value, m.value] = v.split(":"); }); };
+W.saveEdit = async id => { const f = $("#eF"); if (!f.reportValidity()) return; const r = R(id), d = Object.fromEntries(new FormData(f));
+  Object.keys(d).forEach(k => d[k] = String(d[k]).trim()); ["startTime", "endTime"].forEach(k => d[k] = [...$$(`.t24[data-k=${k}] select`)].map(x => x.value).join(":"));
+  try { if (d.startDate + d.startTime >= d.endDate + d.endTime) throw new Error("วันเวลาสิ้นสุดต้องอยู่หลังวันเวลาเริ่มต้น");
+    if (r.status === "อนุมัติ" && d.carPlate) clash({ ...r, ...d }, d.carPlate);
+    await updateDoc(doc(db, CAR.REQ, id), d); toast("บันทึกการแก้ไขแล้ว"); W.detail(id); } catch (e) { toast(errMsg(e), 1); } };
 
 /* ---------- e-signature ---------- */
 const otp = id => `<div class="otp" id="${id}">${'<input inputmode="numeric" maxlength="1" type="password" autocomplete="off">'.repeat(6)}</div>`;
@@ -514,7 +533,7 @@ W.carModal = i => { const c = i == null ? { active: true } : D.cars[i];
   <div style="text-align:right;margin-top:14px"><button class="btn btn-pri" onclick="saveCar(${i ?? -1})">💾 บันทึก</button></div>`); };
 W.saveCar = async i => { const f = $("#carF"); if (!f.reportValidity()) return; const o = Object.fromEntries(new FormData(f)); o.active = !!o.active; const c = D.cars[i];
   try { if (c?._id) await setDoc(doc(db, CAR.CARS, c._id), o); else await addDoc(collection(db, CAR.CARS), o); toast("บันทึกข้อมูลรถแล้ว"); closeM(); } catch (e) { toast(errMsg(e), 1); } };
-W.delCar = async i => { const c = D.cars[i]; if (!confirm("ลบรถ " + c.plate + " ?")) return; try { await deleteDoc(doc(db, CAR.CARS, c._id)); toast("ลบแล้ว"); } catch (e) { toast(errMsg(e), 1); } };
+W.delCar = async i => { const c = D.cars[i]; try { if (await secureDelete(CAR.CARS, c._id, c)) toast("ลบรถ " + c.plate + " แล้ว"); } catch (e) { toast(e.message, 1); } };
 W.saveSet = async () => { try { await setDoc(doc(db, CAR.SETTINGS, "car"), Object.fromEntries(new FormData($("#setForm"))), { merge: true }); toast("บันทึกการตั้งค่าแล้ว"); } catch (e) { toast(errMsg(e), 1); } };
 
 /* ---------- PRINT A4 แบบ ๓ ---------- */

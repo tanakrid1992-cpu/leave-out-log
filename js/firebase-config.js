@@ -46,3 +46,28 @@ export const CAR_DEFAULT = {
 export const SEED_CAR = { plate: "งจ 4782 ชลบุรี", brand: "รถยนต์ส่วนกลาง", type: "รถกระบะ", seats: "5", driver: "", active: true };
 // ผู้ดูแลหลัก (เพิ่มผู้ดูแลอื่นได้ที่ Firestore: admins/{อีเมล})
 export const OWNER = "tanakrid1992@gmail.com";
+
+// ===== ลบข้อมูลพร้อมรหัสยืนยัน (ตรวจที่ Firestore Rules) + สำเนาใน deletions =====
+import { doc as _doc, writeBatch as _wb, serverTimestamp as _ts } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const _sha = async s => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))].map(b => b.toString(16).padStart(2, "0")).join("");
+export async function secureDelete(col, id, data) {
+  const pw = await askPw(); if (pw == null) return false;
+  const b = _wb(db), clean = Object.fromEntries(Object.entries(data || {}).filter(([k]) => !k.startsWith("_") && k !== "id"));
+  b.set(_doc(db, "deletions", `${col}_${id}`), { h: await _sha(`del:${pw}:klongtumru`), t: _ts(), by: auth.currentUser?.email || "", col, data: clean });
+  b.delete(_doc(db, col, id));
+  try { await b.commit(); return true; }
+  catch (e) { throw new Error(e.code === "permission-denied" ? "รหัสยืนยันการลบไม่ถูกต้อง" : (e.message || e)); }
+}
+function askPw() {
+  return new Promise(res => {
+    const m = document.createElement("div"); m.className = "modal on"; m.style.zIndex = 90;
+    m.innerHTML = `<div class="mbox" style="max-width:400px;text-align:center"><div style="font-size:42px">🗑️</div><h3 style="margin:6px 0">ยืนยันการลบข้อมูล</h3>
+      <p class="muted" style="margin:0 0 14px;font-size:14px">กรอกรหัสยืนยันการลบ (ข้อมูลที่ลบจะถูกเก็บสำเนาไว้)</p>
+      <input type="password" id="_pw" placeholder="รหัสยืนยันการลบ" autocomplete="off" style="text-align:center">
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn btn-ghost" id="_c">ยกเลิก</button><button class="btn btn-bad" id="_o">🗑️ ลบข้อมูล</button></div></div>`;
+    document.body.append(m); const i = m.querySelector("#_pw"); i.focus();
+    const done = v => { m.remove(); res(v); };
+    m.querySelector("#_c").onclick = () => done(null); m.querySelector("#_o").onclick = () => i.value && done(i.value);
+    i.onkeydown = e => { if (e.key === "Enter" && i.value) done(i.value); if (e.key === "Escape") done(null); };
+  });
+}

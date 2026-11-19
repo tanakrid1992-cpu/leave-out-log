@@ -11,6 +11,15 @@ service cloud.firestore {
 
     match /admins/{email} { allow read, write: if isAdmin(); }
 
+    // ===== ลบข้อมูลต้องยืนยันรหัสลบ (ตรวจที่ฐานข้อมูล) + เก็บสำเนาไว้ใน deletions =====
+    function pwOk(h) { return h == '68ebdf38f95837f49ae7223fd36eac771f45b0283263c50362754453359095eb'; }
+    function delOk(key) { return isAdmin() && pwOk(getAfter(/databases/$(database)/documents/deletions/$(key)).data.h); }
+    match /deletions/{id} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && pwOk(request.resource.data.h) && request.resource.data.t == request.time
+        && request.resource.data.keys().hasOnly(['h','t','by','col','data']);
+    }
+
     // ===== บันทึกการออกนอกสถานที่ =====
     match /leave_out_logs/{id} {
       allow create: if request.resource.data.keys().hasOnly(['name','position','division','purpose','place','date','timeOut','timeIn','durationMin','createdAt'])
@@ -19,12 +28,13 @@ service cloud.firestore {
         && request.resource.data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
         && request.resource.data.durationMin is int && request.resource.data.durationMin > 0
         && request.resource.data.createdAt == request.time;
-      allow read, update, delete: if isAdmin();
+      allow read, update: if isAdmin();
+      allow delete: if delOk('leave_out_logs_' + id);
     }
 
     // ===== ระบบขอใช้รถส่วนกลาง =====
     match /settings/{id} { allow read: if true; allow write: if isAdmin(); }
-    match /cars/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /cars/{id} { allow read: if true; allow create, update: if isAdmin(); allow delete: if delOk('cars_' + id); }
     match /counters/{id} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasOnly(['n']) && request.resource.data.n == 1;
@@ -42,7 +52,7 @@ service cloud.firestore {
         && rid.matches('^CR[0-9]{4}-[0-9]{3,}$')
         && getAfter(/databases/$(database)/documents/counters/$(rid.split('-')[0])).data.n == int(rid.split('-')[1]);
       allow update: if isAdmin() || signUpdate(rid);
-      allow delete: if isAdmin();
+      allow delete: if delOk('car_requests_' + rid);
     }
     function slotOk(rid, slot, role) {
       let s = request.resource.data[slot];

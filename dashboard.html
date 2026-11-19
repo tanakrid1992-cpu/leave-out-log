@@ -97,11 +97,12 @@
   </section>
   <footer>© เทศบาลตำบลคลองตำหรุ · Smart Leave-Out System</footer>
 </main>
+<div class="modal" id="modal" onclick="if(event.target===this)this.classList.remove('on')"><div class="mbox" id="mbox"></div></div>
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { db, auth, COLLECTION, DIVISIONS, DIV_COLORS, ORG_NAME, CAR } from "./js/firebase-config.js";
-import { collection, query, where, orderBy, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { db, auth, COLLECTION, DIVISIONS, DIV_COLORS, ORG_NAME, CAR, secureDelete } from "./js/firebase-config.js";
+import { collection, query, where, orderBy, getDocs, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const $ = s => document.querySelector(s);
@@ -216,7 +217,7 @@ function render() {
     <td><b>${esc(r.name)}</b>${cntBy[r.name] >= LIMIT[period] ? ` <span class="flag" title="ออกบ่อยกว่าเกณฑ์">⚠ ${cntBy[r.name]} ครั้ง</span>` : ""}<div class="muted" style="font-size:12.5px">${esc(r.position)}</div></td>
     <td><span class="dp" style="background:${col(r.division)}22;color:${col(r.division)}">${esc(r.division)}</span></td>
     <td>${esc(r.purpose)}</td><td>${esc(r.place)}</td><td style="white-space:nowrap">${r.timeOut}–${r.timeIn}</td><td>${r.durationMin}</td>
-    <td><button class="del" data-id="${r.id}" title="ลบ">🗑</button></td></tr>`).join("") ||
+    <td style="white-space:nowrap"><button class="del" data-ed="${r.id}" title="แก้ไข" style="color:var(--pri)">✏️</button><button class="del" data-id="${r.id}" title="ลบ">🗑</button></td></tr>`).join("") ||
     `<tr><td colspan="8" class="muted" style="text-align:center;padding:34px">ไม่มีข้อมูลในช่วงเวลานี้</td></tr>`;
 
   // รายกอง
@@ -292,8 +293,34 @@ function insights(v, pv, byDiv, top, H, ok = []) {
 $("#periodTabs").onclick = e => { const b = e.target.closest(".tab"); if (!b) return; document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t === b)); period = b.dataset.p; load(); };
 $("#refDate").onchange = load; $("#prev").onclick = () => shift(-1); $("#next").onclick = () => shift(1);
 $("#divFilter").onchange = render; $("#q").oninput = render;
-$("#tbody").onclick = async e => { const b = e.target.closest(".del"); if (!b || !confirm("ยืนยันลบรายการนี้?")) return;
-  try { await deleteDoc(doc(db, COLLECTION, b.dataset.id)); toast("ลบเรียบร้อย"); } catch (err) { toast("ลบไม่สำเร็จ: " + (err.code || err.message), true); } };
+$("#tbody").onclick = async e => { const b = e.target.closest(".del"); if (!b) return;
+  if (b.dataset.ed) return editLog(cur.find(r => r.id === b.dataset.ed));
+  try { if (await secureDelete(COLLECTION, b.dataset.id, cur.find(r => r.id === b.dataset.id))) toast("ลบเรียบร้อย (เก็บสำเนาไว้แล้ว)"); } catch (err) { toast(err.message, true); } };
+
+// ===== แก้ไขข้อมูล =====
+function editLog(r) {
+  const o = n => Array.from({ length: n }, (_, i) => `<option>${pad(i)}</option>`).join("");
+  const tp = (k, v) => `<div class="t24" data-k="${k}"><select>${o(24)}</select><b>:</b><select>${o(60)}</select></div>`;
+  $("#mbox").innerHTML = `<h3 class="mh">✏️ แก้ไขข้อมูลการออกนอกสถานที่<button class="x" onclick="document.getElementById('modal').classList.remove('on')">✕</button></h3>
+  <form id="ef" class="grid g2" onsubmit="return false">
+    <div><label>ชื่อ - สกุล</label><input name="name" required value="${esc(r.name)}"></div><div><label>ตำแหน่ง</label><input name="position" required value="${esc(r.position)}"></div>
+    <div class="full"><label>สำนัก/กอง</label><select name="division">${DIVISIONS.map(d => `<option ${d === r.division ? "selected" : ""}>${d}</option>`).join("")}</select></div>
+    <div class="full"><label>ขออนุญาตไป</label><textarea name="purpose" required>${esc(r.purpose)}</textarea></div>
+    <div class="full"><label>สถานที่</label><input name="place" required value="${esc(r.place)}"></div>
+    <div class="full"><label>วันที่</label><input type="date" name="date" required value="${r.date}"></div>
+    <div><label>เวลาไป</label>${tp("timeOut")}</div><div><label>เวลากลับ</label>${tp("timeIn")}</div>
+  </form><div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px"><button class="btn btn-pri" id="eSave">💾 บันทึกการแก้ไข</button></div>`;
+  [["timeOut", r.timeOut], ["timeIn", r.timeIn]].forEach(([k, v]) => { const [h, m] = $(`.t24[data-k=${k}]`).querySelectorAll("select"); [h.value, m.value] = v.split(":"); });
+  $("#modal").classList.add("on");
+  $("#eSave").onclick = async () => {
+    const f = $("#ef"); if (!f.reportValidity()) return;
+    const d = Object.fromEntries(new FormData(f)); Object.keys(d).forEach(k => d[k] = d[k].trim());
+    const tv = k => [...$(`.t24[data-k=${k}]`).querySelectorAll("select")].map(x => x.value).join(":");
+    d.timeOut = tv("timeOut"); d.timeIn = tv("timeIn"); d.durationMin = toMin(d.timeIn) - toMin(d.timeOut);
+    if (d.durationMin <= 0) return toast("เวลากลับต้องมากกว่าเวลาไป", true);
+    try { await updateDoc(doc(db, COLLECTION, r.id), d); $("#modal").classList.remove("on"); toast("บันทึกการแก้ไขแล้ว"); } catch (err) { toast("แก้ไขไม่สำเร็จ: " + (err.code || err.message), true); }
+  };
+}
 
 // ===== Export Excel: ชีตสรุป + ชีตแยกแต่ละสำนัก/กอง =====
 $("#btnExport").onclick = () => {
