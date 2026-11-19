@@ -40,6 +40,9 @@
       <div style="flex:0 0 auto"><label>ช่วงเวลา</label>
         <div class="tabs" id="periodTabs"><button class="tab" data-p="week">สัปดาห์</button><button class="tab on" data-p="month">เดือน</button><button class="tab" data-p="year">ปี</button></div>
       </div>
+      <div style="flex:0 0 auto"><label>ระบบ</label>
+        <div class="tabs" id="sysTabs"><button class="tab on" data-s="all">🔀 รวมทั้ง 2 ระบบ</button><button class="tab" data-s="leave">📝 ออกนอกสถานที่</button><button class="tab" data-s="car">🚘 ขอใช้รถ</button></div>
+      </div>
       <div style="flex:0 0 auto;display:flex;gap:6px;align-items:flex-end">
         <button class="chipbtn" id="prev" title="ก่อนหน้า">‹</button>
         <div><label>วันที่อ้างอิง</label><input type="date" id="refDate"></div>
@@ -79,19 +82,19 @@
     <div class="glass pad"><h3 class="ttl"><span class="ic">🏅</span>ออกบ่อยที่สุด (Top 10)</h3><div class="tbl" style="max-height:310px"><table><thead><tr><th>#</th><th>ชื่อ</th><th>ครั้ง</th><th>ชม.</th></tr></thead><tbody id="topBody"></tbody></table></div></div>
   </section>
 
-  <section class="grid g3" style="margin-bottom:16px">
+  <section class="grid g3" style="margin-bottom:16px" id="carSec">
     <div class="glass pad"><h3 class="ttl"><span class="ic">🚘</span>การใช้รถส่วนกลาง <a href="car.html" class="chipbtn" style="margin-left:auto;font-size:12.5px">เปิดระบบ →</a></h3>
       <div class="grid g2" style="gap:10px;margin-bottom:12px">
         <div class="glass" style="padding:12px"><div class="muted" style="font-size:12.5px">เที่ยวที่อนุมัติ</div><div class="dur" id="cOk">0</div></div>
         <div class="glass" style="padding:12px"><div class="muted" style="font-size:12.5px">รออนุมัติ</div><div class="dur" id="cWait">0</div></div>
       </div><div class="bars" id="carBars"></div></div>
-    <div class="glass pad s2"><h3 class="ttl"><span class="ic">🧭</span>ภาพรวมการออกนอกสำนักงาน: ธุระส่วนตัว vs ไปราชการ (แยกสำนัก/กอง)</h3><div class="chart"><canvas id="cMix"></canvas></div></div>
+    <div class="glass pad s2" id="mixCard"><h3 class="ttl"><span class="ic">🧭</span>ภาพรวมการออกนอกสำนักงาน: ธุระส่วนตัว vs ไปราชการ (แยกสำนัก/กอง)</h3><div class="chart"><canvas id="cMix"></canvas></div></div>
   </section>
 
   <section class="glass pad">
     <h3 class="ttl"><span class="ic">🗂️</span>รายการทั้งหมด <span class="badge" id="cnt">0</span></h3>
     <div class="tbl"><table>
-      <thead><tr><th>วันที่</th><th>ชื่อ - สกุล</th><th>สำนัก/กอง</th><th>ขออนุญาตไป</th><th>สถานที่</th><th>เวลา</th><th>นาที</th><th></th></tr></thead>
+      <thead><tr><th>วันที่ / ประเภท</th><th>ชื่อ - สกุล</th><th>สำนัก/กอง</th><th>ธุระ / วัตถุประสงค์</th><th>สถานที่</th><th>เวลา</th><th>นาที</th><th></th></tr></thead>
       <tbody id="tbody"></tbody>
     </table></div>
   </section>
@@ -122,8 +125,12 @@ DIVISIONS.forEach(d => $("#divFilter").add(new Option(d, d)));
 $("#refDate").value = ymd(new Date());
 Chart.defaults.color = "#64748b"; Chart.defaults.font.family = "Sarabun"; Chart.defaults.borderColor = "#eef2f7";
 
-let period = "month", cur = [], prev = [], today = [], charts = {}, unsub = null, unsubToday = null, CARS = [];
+let SYS = "all", VIEW = [], period = "month", cur = [], prev = [], today = [], charts = {}, unsub = null, unsubToday = null, CARS = [];
 onSnapshot(collection(db, CAR.REQ), s => { CARS = s.docs.map(d => ({ id: d.id, ...d.data() })); if (auth.currentUser) render(); });
+const tripMin = r => Math.max(0, Math.round((new Date(r.endDate + "T" + r.endTime) - new Date(r.startDate + "T" + r.startTime)) / 60000));
+const toRow = r => ({ id: r.id, _car: 1, name: r.name, position: r.position, division: r.department, purpose: r.purpose, place: r.destination, date: r.startDate, timeOut: r.startTime, timeIn: r.endTime, durationMin: tripMin(r), carPlate: r.carPlate, endDate: r.endDate });
+const carRows = R => CARS.filter(r => r.status === "อนุมัติ" && r.startDate >= R.start && r.startDate <= R.end).map(toRow);
+const NOUN = () => ({ all: "การออกนอกสำนักงาน (ธุระส่วนตัว + ไปราชการ)", leave: "การออกนอกสถานที่ (ธุระส่วนตัว)", car: "การไปราชการด้วยรถส่วนกลาง" }[SYS]);
 const carIn = (R, dv) => CARS.filter(r => r.startDate >= R.start && r.startDate <= R.end && (!dv || r.department === dv));
 
 // ===== Auth =====
@@ -186,9 +193,9 @@ function delta(el, a, b) {
 
 function renderNow() {
   const n = new Date(), m = n.getHours() * 60 + n.getMinutes(), dv = $("#divFilter").value;
-  const list = today.filter(r => !dv || r.division === dv).sort((a, b) => a.timeOut.localeCompare(b.timeOut));
+  const list = today.filter(r => SYS !== "car" && (!dv || r.division === dv)).sort((a, b) => a.timeOut.localeCompare(b.timeOut));
   const td = ymd(n), cur2 = `${td} ${pad(n.getHours())}:${pad(n.getMinutes())}`;
-  const trips = CARS.filter(r => r.status === "อนุมัติ" && r.startDate <= td && r.endDate >= td && (!dv || r.department === dv));
+  const trips = CARS.filter(r => SYS !== "leave" && r.status === "อนุมัติ" && r.startDate <= td && r.endDate >= td && (!dv || r.department === dv));
   const out = list.filter(r => toMin(r.timeOut) <= m && m < toMin(r.timeIn)).length + trips.filter(r => (r.startDate + " " + r.startTime) <= cur2 && cur2 < (r.endDate + " " + r.endTime)).length;
   $("#kNow").textContent = out;
   const tripHTML = trips.map(r => { const a = r.startDate < td ? 0 : toMin(r.startTime), b = r.endDate > td ? 1440 : toMin(r.endTime), st = m < a ? ["รอเดินทาง", "#d97706"] : m < b ? ["ไปราชการ", "#0284c7"] : ["กลับแล้ว", "#94a3b8"];
@@ -204,7 +211,10 @@ function renderNow() {
 }
 
 function render() {
-  const v = fil(cur), pv = fil(prev), R = range(), tm = sum(v);
+  const R = range(), pr = new Date(R.s); pr.setDate(pr.getDate() - 1); const PR = range(pr);
+  const v = fil([...(SYS === "car" ? [] : cur), ...(SYS === "leave" ? [] : carRows(R))]).sort((a, b) => (b.date + b.timeOut).localeCompare(a.date + a.timeOut));
+  const pv = fil([...(SYS === "car" ? [] : prev), ...(SYS === "leave" ? [] : carRows(PR))]), tm = sum(v); VIEW = v;
+  $("#carSec").classList.toggle("hidden", SYS === "leave"); $("#mixCard").classList.toggle("hidden", SYS !== "all");
   $("#kTotal").textContent = v.length; delta($("#dTotal"), v.length, pv.length);
   $("#kPeople").textContent = new Set(v.map(r => r.name)).size; delta($("#dPeople"), new Set(v.map(r => r.name)).size, new Set(pv.map(r => r.name)).size);
   $("#kHours").textContent = hrs(tm); delta($("#dHours"), tm, sum(pv));
@@ -213,11 +223,11 @@ function render() {
 
   // ตาราง
   const cntBy = {}; v.forEach(r => cntBy[r.name] = (cntBy[r.name] || 0) + 1);
-  $("#tbody").innerHTML = v.map(r => `<tr><td style="white-space:nowrap">${thD(r.date)}</td>
+  $("#tbody").innerHTML = v.map(r => `<tr><td style="white-space:nowrap">${thD(r.date)}<div><span class="dp" style="background:${r._car ? "#e0f2fe;color:#0369a1" : "#eef2ff;color:#4f46e5"}">${r._car ? "🚘 ไปราชการ" : "📝 ธุระส่วนตัว"}</span></div></td>
     <td><b>${esc(r.name)}</b>${cntBy[r.name] >= LIMIT[period] ? ` <span class="flag" title="ออกบ่อยกว่าเกณฑ์">⚠ ${cntBy[r.name]} ครั้ง</span>` : ""}<div class="muted" style="font-size:12.5px">${esc(r.position)}</div></td>
     <td><span class="dp" style="background:${col(r.division)}22;color:${col(r.division)}">${esc(r.division)}</span></td>
     <td>${esc(r.purpose)}</td><td>${esc(r.place)}</td><td style="white-space:nowrap">${r.timeOut}–${r.timeIn}</td><td>${r.durationMin}</td>
-    <td style="white-space:nowrap"><button class="del" data-ed="${r.id}" title="แก้ไข" style="color:var(--pri)">✏️</button><button class="del" data-id="${r.id}" title="ลบ">🗑</button></td></tr>`).join("") ||
+    <td style="white-space:nowrap">${r._car ? `<a class="del" href="car.html" title="${esc(r.id)} · ${esc(r.carPlate)} — จัดการในระบบขอใช้รถ" style="color:var(--cy)">🔗</a>` : `<button class="del" data-ed="${r.id}" title="แก้ไข" style="color:var(--pri)">✏️</button><button class="del" data-id="${r.id}" title="ลบ">🗑</button>`}</td></tr>`).join("") ||
     `<tr><td colspan="8" class="muted" style="text-align:center;padding:34px">ไม่มีข้อมูลในช่วงเวลานี้</td></tr>`;
 
   // รายกอง
@@ -267,10 +277,10 @@ function insights(v, pv, byDiv, top, H, ok = []) {
     const both = [...new Set(v.map(r => r.name))].filter(n => ok.some(r => r.name === n));
     const dc = {}; ok.forEach(r => dc[r.department] = (dc[r.department] || 0) + 1); const t = Object.entries(dc).sort((a, b) => b[1] - a[1])[0];
     return [["🚘", `ไปราชการด้วยรถส่วนกลาง <b>${ok.length} เที่ยว</b> ใน${P}นี้ · <b>${esc(t[0])}</b> ใช้รถมากที่สุด (${t[1]} เที่ยว)${both.length ? ` · มี ${both.length} คนที่ทั้งไปราชการและออกธุระส่วนตัว` : ""}`]]; };
-  if (!v.length) { const cl = carLine(); if (cl.length) { $("#ai").innerHTML = cl.map(([i, t]) => `<div class="it"><i>${i}</i><span>${t}</span></div>`).join(""); return; } $("#ai").innerHTML = `<div class="it"><i>💤</i><span>ยังไม่มีข้อมูลใน${P}นี้ ระบบจะวิเคราะห์ให้อัตโนมัติเมื่อมีการบันทึก</span></div>`; return; }
+  if (!v.length) { const cl = SYS === "all" ? carLine() : []; if (cl.length) { $("#ai").innerHTML = cl.map(([i, t]) => `<div class="it"><i>${i}</i><span>${t}</span></div>`).join(""); return; } $("#ai").innerHTML = `<div class="it"><i>💤</i><span>ยังไม่มีข้อมูลใน${P}นี้ ระบบจะวิเคราะห์ให้อัตโนมัติเมื่อมีการบันทึก</span></div>`; return; }
   const tm = sum(v);
   if (pv.length) { const p = Math.round((v.length - pv.length) / pv.length * 100);
-    out.push([p > 20 ? "📈" : p < -20 ? "📉" : "➖", `${P}นี้มีการออกนอกสถานที่ <b>${v.length} ครั้ง</b> ${p === 0 ? "เท่ากับ" : p > 0 ? `<b style="color:#d97706">เพิ่มขึ้น ${p}%</b> จาก` : `<b style="color:#059669">ลดลง ${-p}%</b> จาก`}${P}ก่อนหน้า (${pv.length} ครั้ง)`]); }
+    out.push([p > 20 ? "📈" : p < -20 ? "📉" : "➖", `${P}นี้มี${NOUN()} <b>${v.length} ครั้ง</b> ${p === 0 ? "เท่ากับ" : p > 0 ? `<b style="color:#d97706">เพิ่มขึ้น ${p}%</b> จาก` : `<b style="color:#059669">ลดลง ${-p}%</b> จาก`}${P}ก่อนหน้า (${pv.length} ครั้ง)`]); }
   const td = [...byDiv].sort((a, b) => b.n - a.n)[0];
   if (td.n) out.push(["🏢", `<b>${td.d}</b> ออกนอกสถานที่มากที่สุด ${td.n} ครั้ง คิดเป็น <b>${Math.round(td.n / v.length * 100)}%</b> ของทั้งหมด รวม ${hrs(td.m)} ชั่วโมง`]);
   let best = [0, 0, 0]; H.forEach((r, i) => r.forEach((c, j) => c > best[0] && (best = [c, i, j])));
@@ -285,12 +295,13 @@ function insights(v, pv, byDiv, top, H, ok = []) {
   if (lunch || offh) out.push(["🍱", `${lunch} ครั้ง (${Math.round(lunch / v.length * 100)}%) คาบเกี่ยวช่วงพักกลางวัน${offh ? ` และ ${offh} ครั้งมีช่วงเวลานอกเวลาราชการ` : ""}`]);
   const pc = {}; v.forEach(r => pc[r.place] = (pc[r.place] || 0) + 1); const tp = Object.entries(pc).sort((a, b) => b[1] - a[1])[0];
   if (tp[1] > 1) out.push(["📍", `สถานที่ที่ไปบ่อยที่สุดคือ <b>${esc(tp[0])}</b> (${tp[1]} ครั้ง)`]);
-  out.push(...carLine());
+  if (SYS === "all") out.push(...carLine());
   $("#ai").innerHTML = out.map(([i, t], k) => `<div class="it" style="animation-delay:${k * 70}ms"><i>${i}</i><span>${t}</span></div>`).join("");
 }
 
 // ===== Events =====
-$("#periodTabs").onclick = e => { const b = e.target.closest(".tab"); if (!b) return; document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t === b)); period = b.dataset.p; load(); };
+$("#periodTabs").onclick = e => { const b = e.target.closest(".tab"); if (!b) return; document.querySelectorAll("#periodTabs .tab").forEach(t => t.classList.toggle("on", t === b)); period = b.dataset.p; load(); };
+$("#sysTabs").onclick = e => { const b = e.target.closest(".tab"); if (!b) return; document.querySelectorAll("#sysTabs .tab").forEach(t => t.classList.toggle("on", t === b)); SYS = b.dataset.s; render(); };
 $("#refDate").onchange = load; $("#prev").onclick = () => shift(-1); $("#next").onclick = () => shift(1);
 $("#divFilter").onchange = render; $("#q").oninput = render;
 $("#tbody").onclick = async e => { const b = e.target.closest(".del"); if (!b) return;
@@ -324,8 +335,8 @@ function editLog(r) {
 
 // ===== Export Excel: ชีตสรุป + ชีตแยกแต่ละสำนัก/กอง =====
 $("#btnExport").onclick = () => {
-  const R = range(), list = fil(cur);
-  const cl = carIn(R, $("#divFilter").value).sort((a, b) => a.id.localeCompare(b.id));
+  const R = range(), list = VIEW;
+  const cl = SYS === "leave" ? [] : carIn(R, $("#divFilter").value).sort((a, b) => a.id.localeCompare(b.id));
   if (!list.length && !cl.length) return toast("ไม่มีข้อมูลให้ export", true);
   const wb = XLSX.utils.book_new(), F = { name: "TH SarabunPSK", sz: 16 };
   const bd = (() => { const s = { style: "thin", color: { rgb: "CBD5E1" } }; return { top: s, bottom: s, left: s, right: s }; })();
@@ -341,13 +352,13 @@ $("#btnExport").onclick = () => {
   const divs = $("#divFilter").value ? [$("#divFilter").value] : DIVISIONS;
   const rows = divs.map((d, i) => { const x = list.filter(r => r.division === d), m = sum(x); return [i + 1, d, x.length, new Set(x.map(r => r.name)).size, m, +(m / 60).toFixed(2)]; });
   const tm = sum(list); rows.push(["", "รวมทั้งสิ้น", list.length, new Set(list.map(r => r.name)).size, tm, +(tm / 60).toFixed(2)]);
-  XLSX.utils.book_append_sheet(wb, sheet(`สรุปการออกนอกสถานที่ (ธุระส่วนตัว) ${ORG_NAME}`, ["ลำดับ", "สำนัก/กอง", "จำนวนครั้ง", "จำนวนคน", "รวม (นาที)", "รวม (ชั่วโมง)"], rows, [7, 32, 12, 12, 12, 14]), "สรุป");
-  const head = ["ลำดับ", "วันที่", "ชื่อ - สกุล", "ตำแหน่ง", "ขออนุญาตไป", "สถานที่", "เวลาไป", "เวลากลับ", "รวม (นาที)"];
+  XLSX.utils.book_append_sheet(wb, sheet(`สรุป${NOUN()} ${ORG_NAME}`, ["ลำดับ", "สำนัก/กอง", "จำนวนครั้ง", "จำนวนคน", "รวม (นาที)", "รวม (ชั่วโมง)"], rows, [7, 32, 12, 12, 12, 14]), "สรุป");
+  const head = ["ลำดับ", "ประเภท", "วันที่", "ชื่อ - สกุล", "ตำแหน่ง", "ธุระ/วัตถุประสงค์", "สถานที่", "เวลาไป", "เวลากลับ", "รวม (นาที)"];
   divs.forEach(d => { const x = list.filter(r => r.division === d).sort((a, b) => (a.date + a.timeOut).localeCompare(b.date + b.timeOut)); if (!x.length) return;
-    XLSX.utils.book_append_sheet(wb, sheet(`บันทึกการออกนอกสถานที่ · ${d}`, head, x.map((r, i) => [i + 1, new Date(r.date + "T00:00").toLocaleDateString("th-TH", { dateStyle: "medium" }), r.name, r.position, r.purpose, r.place, r.timeOut, r.timeIn, r.durationMin]), [7, 14, 24, 22, 30, 26, 9, 9, 10]), d.slice(0, 31)); });
+    XLSX.utils.book_append_sheet(wb, sheet(`${NOUN()} · ${d}`, head, x.map((r, i) => [i + 1, r._car ? "ไปราชการ (รถส่วนกลาง)" : "ธุระส่วนตัว", new Date(r.date + "T00:00").toLocaleDateString("th-TH", { dateStyle: "medium" }), r.name, r.position, r.purpose, r.place, r.timeOut, r._car && r.endDate !== r.date ? r.timeIn + " (" + new Date(r.endDate + "T00:00").toLocaleDateString("th-TH", { dateStyle: "short" }) + ")" : r.timeIn, r.durationMin]), [7, 16, 14, 24, 22, 30, 26, 9, 12, 10]), d.slice(0, 31)); });
   if (cl.length) XLSX.utils.book_append_sheet(wb, sheet(`ทะเบียนการขอใช้รถยนต์ส่วนกลาง ${ORG_NAME}`, ["เลขที่", "ผู้ขอ", "สังกัด", "สถานที่ไป", "วัตถุประสงค์", "วันเวลาไป", "วันเวลากลับ", "รถ", "พนักงานขับ", "สถานะ", "ผู้สั่งใช้รถ"],
     cl.map(r => [r.id, r.name, r.department, r.destination, r.purpose, `${thD(r.startDate)} ${r.startTime}`, `${thD(r.endDate)} ${r.endTime}`, r.carPlate, r.driver || "", r.status, r.approver || ""]), [13, 22, 26, 28, 24, 16, 16, 16, 16, 11, 22]), "ใช้รถส่วนกลาง");
-  XLSX.writeFile(wb, `ออกนอกสถานที่_${{ week: "รายสัปดาห์", month: "รายเดือน", year: "รายปี" }[period]}_${R.start}_${R.end}.xlsx`);
+  XLSX.writeFile(wb, `${{ all: "รวม2ระบบ", leave: "ออกนอกสถานที่", car: "ขอใช้รถ" }[SYS]}_${{ week: "รายสัปดาห์", month: "รายเดือน", year: "รายปี" }[period]}_${R.start}_${R.end}.xlsx`);
 };
 </script>
 </body>
