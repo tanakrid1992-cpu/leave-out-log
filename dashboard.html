@@ -129,7 +129,7 @@ let SYS = "all", VIEW = [], period = "month", cur = [], prev = [], today = [], c
 onSnapshot(collection(db, CAR.REQ), s => { CARS = s.docs.map(d => ({ id: d.id, ...d.data() })); if (auth.currentUser) render(); });
 const tripMin = r => Math.max(0, Math.round((new Date(r.endDate + "T" + r.endTime) - new Date(r.startDate + "T" + r.startTime)) / 60000));
 const toRow = r => ({ id: r.id, _car: 1, name: r.name, position: r.position, division: r.department, purpose: r.purpose, place: r.destination, date: r.startDate, timeOut: r.startTime, timeIn: r.endTime, durationMin: tripMin(r), carPlate: r.carPlate, endDate: r.endDate, status: r.status });
-const carRows = R => CARS.filter(r => r.status !== "ไม่อนุมัติ" && r.startDate >= R.start && r.startDate <= R.end).map(toRow);
+const carRows = R => CARS.filter(r => r.startDate >= R.start && r.startDate <= R.end).map(toRow);
 const NOUN = () => ({ all: "การออกนอกสำนักงาน (ธุระส่วนตัว + ไปราชการ)", leave: "การออกนอกสถานที่ (ธุระส่วนตัว)", car: "การไปราชการด้วยรถส่วนกลาง" }[SYS]);
 const carIn = (R, dv) => CARS.filter(r => r.startDate >= R.start && r.startDate <= R.end && (!dv || r.department === dv));
 
@@ -195,10 +195,10 @@ function renderNow() {
   const n = new Date(), m = n.getHours() * 60 + n.getMinutes(), dv = $("#divFilter").value;
   const list = today.filter(r => SYS !== "car" && (!dv || r.division === dv)).sort((a, b) => a.timeOut.localeCompare(b.timeOut));
   const td = ymd(n), cur2 = `${td} ${pad(n.getHours())}:${pad(n.getMinutes())}`;
-  const trips = CARS.filter(r => SYS !== "leave" && r.status !== "ไม่อนุมัติ" && r.startDate <= td && r.endDate >= td && (!dv || r.department === dv));
+  const trips = CARS.filter(r => SYS !== "leave" && r.startDate <= td && r.endDate >= td && (!dv || r.department === dv));
   const out = list.filter(r => toMin(r.timeOut) <= m && m < toMin(r.timeIn)).length + trips.filter(r => r.status === "อนุมัติ" && (r.startDate + " " + r.startTime) <= cur2 && cur2 < (r.endDate + " " + r.endTime)).length;
   $("#kNow").textContent = out;
-  const tripHTML = trips.map(r => { const a = r.startDate < td ? 0 : toMin(r.startTime), b = r.endDate > td ? 1440 : toMin(r.endTime), st = r.status !== "อนุมัติ" ? ["รออนุมัติ", "#d97706"] : m < a ? ["รอเดินทาง", "#d97706"] : m < b ? ["ไปราชการ", "#0284c7"] : ["กลับแล้ว", "#94a3b8"];
+  const tripHTML = trips.map(r => { const a = r.startDate < td ? 0 : toMin(r.startTime), b = r.endDate > td ? 1440 : toMin(r.endTime), st = r.status === "ไม่อนุมัติ" ? ["ไม่อนุมัติ", "#be123c"] : r.status !== "อนุมัติ" ? ["รออนุมัติ", "#d97706"] : m < a ? ["รอเดินทาง", "#d97706"] : m < b ? ["ไปราชการ", "#0284c7"] : ["กลับแล้ว", "#94a3b8"];
     return `<div class="now"><div class="avatar" style="background:${col(r.department)}">🚘</div><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px"><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</b><span class="dp" style="background:${st[1]}22;color:${st[1]}">${st[0]}</span></div>
       <div class="muted" style="font-size:12.5px">${r.startTime}–${r.endTime} · ${esc(r.carPlate)} · ${esc(r.destination)}</div><div class="pg"><i style="width:${Math.max(0, Math.min(100, (m - a) / (b - a) * 100))}%"></i></div></div></div>`; }).join("");
   $("#nowList").innerHTML = tripHTML + list.map(r => {
@@ -223,7 +223,7 @@ function render() {
 
   // ตาราง
   const cntBy = {}; v.forEach(r => cntBy[r.name] = (cntBy[r.name] || 0) + 1);
-  $("#tbody").innerHTML = v.map(r => `<tr><td style="white-space:nowrap">${thD(r.date)}<div><span class="dp" style="background:${r._car ? "#e0f2fe;color:#0369a1" : "#eef2ff;color:#4f46e5"}">${r._car ? "🚘 ไปราชการ" : "📝 ธุระส่วนตัว"}</span>${r._car && r.status !== "อนุมัติ" ? ` <span class="dp" style="background:#fef3c7;color:#b45309">⏳ ${r.status}</span>` : ""}</div></td>
+  $("#tbody").innerHTML = v.map(r => `<tr><td style="white-space:nowrap">${thD(r.date)}<div><span class="dp" style="background:${r._car ? "#e0f2fe;color:#0369a1" : "#eef2ff;color:#4f46e5"}">${r._car ? "🚘 ไปราชการ" : "📝 ธุระส่วนตัว"}</span>${r._car ? ` <span class="dp" style="background:${{ "อนุมัติ": "#d1fae5;color:#047857", "ไม่อนุมัติ": "#ffe4e6;color:#be123c" }[r.status] || "#fef3c7;color:#b45309"}">${{ "อนุมัติ": "✅", "ไม่อนุมัติ": "⛔" }[r.status] || "⏳"} ${r.status}</span>` : ""}</div></td>
     <td><b>${esc(r.name)}</b>${cntBy[r.name] >= LIMIT[period] ? ` <span class="flag" title="ออกบ่อยกว่าเกณฑ์">⚠ ${cntBy[r.name]} ครั้ง</span>` : ""}<div class="muted" style="font-size:12.5px">${esc(r.position)}</div></td>
     <td><span class="dp" style="background:${col(r.division)}22;color:${col(r.division)}">${esc(r.division)}</span></td>
     <td>${esc(r.purpose)}</td><td>${esc(r.place)}</td><td style="white-space:nowrap">${r.timeOut}–${r.timeIn}</td><td>${r.durationMin}</td>
@@ -264,7 +264,7 @@ function render() {
   const short = d => d.replace("กองสาธารณสุขและสิ่งแวดล้อม", "กองสาธารณสุขฯ").replace("กองยุทธศาสตร์และงบประมาณ", "กองยุทธศาสตร์ฯ");
   draw("cMix", "bar", { labels: DIVISIONS.map(short), datasets: [
     { label: "ธุระส่วนตัว (ครั้ง)", data: byDiv.map(x => x.n), backgroundColor: "#6366f1", borderRadius: 6 },
-    { label: "ไปราชการ/ขอใช้รถ (คำขอ)", data: DIVISIONS.map(d => cv.filter(r => r.status !== "ไม่อนุมัติ").filter(r => r.department === d).length), backgroundColor: "#0ea5e9", borderRadius: 6 }] },
+    { label: "ไปราชการ/ขอใช้รถ (คำขอ)", data: DIVISIONS.map(d => cv.filter(r => r.department === d).length), backgroundColor: "#0ea5e9", borderRadius: 6 }] },
     { scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { position: "bottom", labels: { boxWidth: 10 } } } });
   insights(v, pv, byDiv, top, H, ok);
 }
